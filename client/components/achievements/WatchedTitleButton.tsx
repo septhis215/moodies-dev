@@ -1,19 +1,27 @@
 "use client";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Check, Eye, RefreshCw } from "lucide-react";
 import { useAuth } from "@/app/context/AuthProvider";
 import {
   recordAchievementActivity,
 } from "@/lib/achievements";
 import { useWatched } from "@/hooks/useWatched";
+import { isMediaReleased } from "@/lib/media-release";
+import { appToast } from "@/lib/toast";
 
 export default function WatchedTitleButton({
   id,
   type,
+  releaseDate,
+  status,
 }: {
   id: number;
   type: "movie" | "tv";
+  releaseDate?: string | null;
+  status?: string | null;
 }) {
+  const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const { watched, ready, enabled, busy, error, toggle, refresh } = useWatched(id, type);
   const failed = Boolean(error);
@@ -39,11 +47,21 @@ export default function WatchedTitleButton({
       document.removeEventListener("visibilitychange", track);
     };
   }, [isAuthenticated, user?.id, type, id, ready, enabled]);
-  if (!isAuthenticated || (ready && !enabled)) return null;
+  if (!isMediaReleased({ releaseDate, status }) || (ready && !enabled)) return null;
+  function onClick() {
+    if (!isAuthenticated) {
+      appToast.warning("Sign in to mark this title as watched.", {
+        id: "watched-auth-required",
+        action: { label: "Sign in", onClick: () => router.push("/auth/login") },
+      });
+      return;
+    }
+    void (ready ? toggle() : refresh()).catch(() => undefined);
+  }
   return (
     <button
       type="button"
-      onClick={() => void (ready ? toggle() : refresh()).catch(() => undefined)}
+      onClick={onClick}
       disabled={busy || (!ready && !failed)}
       aria-pressed={watched}
       aria-busy={busy}
@@ -68,7 +86,7 @@ export default function WatchedTitleButton({
       ) : (
         <Eye className="h-4 w-4 shrink-0" aria-hidden="true" />
       )}
-      <span className="sr-only sm:not-sr-only">
+      <span>
         {failed ? "Retry" : watched ? "Watched" : "Mark watched"}
       </span>
     </button>

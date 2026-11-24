@@ -165,6 +165,13 @@ client/
   hydration, or white-screen bug report.
 - Toasts are the app-wide error surface; the inventory of what currently uses it is in
   `docs/root-toast-system-report.md` and `docs/error-handling-inventory.md`.
+- Detail-page and poster Watched controls share `lib/media-release.ts`: movie
+  release dates and TV first-air dates determine availability, independently of
+  rating or the next episode's date. Future releases hide Watched; missing dates
+  require a known released status. Released detail pages show a mobile-visible
+  label and a sign-in action for guests. Poster callers pass existing release
+  metadata without additional requests. `npm run test:watched --workspace client`
+  covers eligibility, detail controls, and shared membership behavior.
 - Route-level failure surfaces (`app/error.tsx`, `app/global-error.tsx`,
   `app/not-found.tsx`) all render `components/errors/MoodiesErrorPage`.
   `global-error.tsx` replaces the root layout, so it imports `lib/fonts.ts` and

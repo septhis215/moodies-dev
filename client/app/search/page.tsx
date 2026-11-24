@@ -35,6 +35,7 @@ interface SearchResult {
   profile_path?: string | null;
   release_date?: string;
   first_air_date?: string;
+  status?: string | null;
   vote_average?: number;
   known_for_department?: string;
   known_for?: { id: number; title?: string; name?: string }[];
@@ -674,7 +675,7 @@ export default function SearchResultsPage() {
                       )}
                     </Link>
                     {view === "grid" && item.type !== "person" && (
-                      <PosterActions id={item.id} type={item.type} title={title} rating={hasRating ? rating : null} posterUrl={image} />
+                      <PosterActions id={item.id} type={item.type} title={title} rating={hasRating ? rating : null} releaseDate={item.type === "tv" ? item.first_air_date || item.release_date : item.release_date} status={item.status} posterUrl={image} />
                     )}
                   </article>
                 );

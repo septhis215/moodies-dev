@@ -14,6 +14,7 @@ import { PosterActions } from "@/components/ui/PosterActions";
 
 type FootballStory = All & {
   media_type?: "movie" | "tv";
+  status?: string | null;
   vote_count?: number;
 };
 
@@ -311,7 +312,7 @@ function FootballCard({ item, index }: { item: FootballStory; index: number }) {
           ) : null}
         </div>
       </Link>
-      <PosterActions rating={item.vote_average} id={item.id} type={mediaType} title={title} posterUrl={posterUrl(item.poster_path)} />
+      <PosterActions rating={item.vote_average} id={item.id} type={mediaType} title={title} posterUrl={posterUrl(item.poster_path)} releaseDate={mediaType === "tv" ? item.first_air_date || item.release_date : item.release_date} status={item.status} />
     </article>
   );
 }

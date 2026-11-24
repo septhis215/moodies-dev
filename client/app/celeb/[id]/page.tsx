@@ -40,6 +40,7 @@ interface Credit {
   popularity?: number;
   release_date?: string;
   first_air_date?: string;
+  status?: string | null;
   media_type: "movie" | "tv" | string;
   genre_ids?: number[];
 }
@@ -234,6 +235,8 @@ function CreditCard({
         </p>
       )}
       <PosterActions rating={credit.vote_average}
+        releaseDate={credit.media_type === "tv" ? credit.first_air_date || credit.release_date : credit.release_date}
+        status={credit.status}
         id={credit.id}
         type={credit.media_type === "tv" ? "tv" : "movie"}
         title={getTitle(credit)}

@@ -17,6 +17,7 @@ export type MediaCardItem = {
   vote_average?: number;
   release_date?: string | null;
   first_air_date?: string | null;
+  status?: string | null;
   reason?: string;
 };
 
@@ -73,7 +74,7 @@ export function MediaCard({
           {item.reason}
         </p>
       ) : null}
-      <PosterActions id={item.id} type={type} title={title} rating={item.vote_average} posterUrl={poster} saved={saved} saving={saving} onToggleSave={onToggleSave} saveLabel={actionLabel} />
+      <PosterActions id={item.id} type={type} title={title} rating={item.vote_average} releaseDate={type === "tv" ? item.first_air_date || item.release_date : item.release_date} status={item.status} posterUrl={poster} saved={saved} saving={saving} onToggleSave={onToggleSave} saveLabel={actionLabel} />
     </article>
   );
 }

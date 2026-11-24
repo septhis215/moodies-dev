@@ -32,6 +32,7 @@ type MovieItem = {
   vote_average: number;
   overview?: string;
   release_date?: string;
+  status?: string | null;
   first_air_date?: string;
   media_type?: string;
   matchScore?: number;
@@ -745,7 +746,7 @@ export default function MovieQuizPage() {
                                   ""
                                 ).slice(0, 4)}
                               </p>}
-                              <PosterActions id={item.id} type={item.media_type === "tv" ? "tv" : "movie"} title={titleOf(item)} rating={item.vote_average} posterUrl={posterOf(item)} />
+                              <PosterActions id={item.id} type={item.media_type === "tv" ? "tv" : "movie"} title={titleOf(item)} rating={item.vote_average} releaseDate={item.media_type === "tv" ? item.first_air_date || item.release_date : item.release_date} status={item.status} posterUrl={posterOf(item)} />
                             </article>
                           ))}
                         </div>

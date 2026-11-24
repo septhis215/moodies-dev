@@ -35,6 +35,7 @@ interface Recommendation {
   genreNames?: string[];
   voteAverage: number;
   releaseDate: string | null;
+  status?: string | null;
   posterPath: string | null;
   backdropPath: string | null;
   score: number | string;
@@ -609,6 +610,8 @@ export default function MoodRecommendationsSection({
                         )}
                       </Link>
                       <PosterActions rating={rec.voteAverage}
+                        releaseDate={rec.releaseDate}
+                        status={rec.status}
                         className="mb-2.5"
                         id={rec.tmdbId}
                         type={rec.mediaType === "TV" ? "tv" : "movie"}

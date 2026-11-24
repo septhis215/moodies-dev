@@ -31,7 +31,9 @@ const mocks = `import React,{useSyncExternalStore} from 'react';
 `;
 const result = await build({
   stdin: { resolveDir: root, loader: "tsx", contents: `import React from 'react';import{createRoot}from'react-dom/client';import{MediaCard}from'./client/components/ui/MediaCard';import{AppToaster}from'./client/components/providers/AppToaster';import{appToast}from'./client/lib/toast';window.clearToasts=()=>appToast.dismiss();
-    createRoot(document.getElementById('root')).render(<><div className='fixture-grid'>{[0,1].map(i=><MediaCard key={i} item={{id:42,title:'A title that wraps onto another line',poster_path:i?null:'/poster.jpg',vote_average:i?0:8.1}}/>)}</div><AppToaster/></>);` },
+    const root=createRoot(document.getElementById('root'));
+    window.releaseFixture=(item)=>root.render(<><MediaCard item={item}/><AppToaster/></>);
+    root.render(<><div className='fixture-grid'>{[0,1].map(i=><MediaCard key={i} item={{id:42,title:'A title that wraps onto another line',poster_path:i?null:'/poster.jpg',release_date:'2000-01-01',vote_average:i?0:8.1}}/>)}</div><AppToaster/></>);` },
   bundle: true, write: false, outfile: "fixture.js", jsx: "automatic",
   alias: { "@": resolve(root, "client") }, define: { "process.env.NODE_ENV": '"test"', "process.env.NEXT_PUBLIC_TMDB_IMAGE_BASE": '""', "process.env": "{}" },
   plugins: [{ name: "account-fixture", setup(builder) {
@@ -90,7 +92,7 @@ try {
     await upcoming.getByRole("button", { name: /^More actions/ }).click();
     const upcomingModal = upcoming.getByRole("dialog");
     await upcomingModal.waitFor();
-    assert.equal(await upcomingModal.locator('[data-action="watched"]').count(), 0, "Unrated titles cannot be marked watched");
+    assert.equal(await upcomingModal.locator('[data-action="watched"]').count(), 1, "Released unrated titles can be marked watched");
     await page.keyboard.press('Escape');
     await upcomingModal.waitFor({ state: 'hidden' });
     assert.equal(await metadata.height, 40, "Two title lines stay reserved so card footers line up");
@@ -195,6 +197,32 @@ try {
     }
     console.log(`Minimal poster footer: inline rating, icon-only44px controls,104px row,52px dialog rows, shared state, keyboard/modal dismissal, auth and errors passed at ${width}px.`);
   }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  for (const [type, date, status, expected] of [
+    ['movie', '2000-01-01', null, true],
+    ['tv', '2000-01-01', null, true],
+    ['movie', '2999-01-01', 'Released', false],
+    ['tv', '2999-01-01', 'Returning Series', false],
+    ['movie', null, 'Planned', false],
+    ['tv', null, 'In Production', false],
+    ['tv', null, 'Returning Series', true],
+    ['movie', null, 'Released', true],
+    ['movie', null, null, false],
+    ['tv', null, null, false],
+  ]) {
+    await page.evaluate(({type,date,status}) => { window.posterFixture.reset(); window.releaseFixture({id:84,type,title:'Release eligibility fixture',vote_average:0,...(type==='tv'?{first_air_date:date}:{release_date:date}),status}); }, {type,date,status});
+    const card = page.locator('article');
+    await card.getByRole('button', { name: /^More actions/ }).click();
+    const modal = page.getByRole('dialog', { name: 'Release eligibility fixture', exact: true });
+    await modal.waitFor();
+    assert.equal(await modal.locator('[data-action="watched"]').count(), expected ? 1 : 0, `${type} ${date ?? status ?? 'unknown'} watched eligibility is independent of zero rating`);
+    assert.equal(await modal.locator('[data-action="like"]').isVisible(), true, 'Like remains available');
+    await page.keyboard.press('Escape');
+    await modal.waitFor({ state: 'hidden' });
+    assert.equal(await card.locator('[data-action="save"]').isVisible(), true, 'Save remains available');
+  }
+  console.log('Poster release eligibility passed for released movies/TV, future dates, planned statuses and unknown dates.');
   assert.deepEqual(errors, []);
 } finally {
   await browser?.close();

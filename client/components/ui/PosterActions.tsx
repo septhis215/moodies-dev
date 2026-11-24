@@ -10,6 +10,7 @@ import { useWatched } from "@/hooks/useWatched";
 import { handleAppError } from "@/lib/errors";
 import { appToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { isMediaReleased } from "@/lib/media-release";
 import styles from "./PosterActions.module.css";
 
 export type PosterActionsProps = {
@@ -18,6 +19,8 @@ export type PosterActionsProps = {
   title: string;
   posterUrl?: string | null;
   rating?: number | null;
+  releaseDate?: string | null;
+  status?: string | null;
   saved?: boolean;
   saving?: boolean;
   onToggleSave?: () => void | Promise<void>;
@@ -28,7 +31,7 @@ export type PosterActionsProps = {
   className?: string;
 };
 
-export function PosterActions({ id, type, title, posterUrl, rating, saved, saving, onToggleSave, saveLabel, liked, liking, onToggleLike, className }: PosterActionsProps) {
+export function PosterActions({ id, type, title, posterUrl, rating, releaseDate, status, saved, saving, onToggleSave, saveLabel, liked, liking, onToggleLike, className }: PosterActionsProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const watchlist = useWatchlist();
@@ -55,8 +58,10 @@ export function PosterActions({ id, type, title, posterUrl, rating, saved, savin
   const isSaved = saved ?? watchlist.isInWatchlist(id, libraryType);
   const isLiked = liked ?? favorites.isLiked(id, libraryType);
   const meta = { title, posterUrl };
+  const canMarkWatched = isMediaReleased({ releaseDate, status });
 
   async function run(action: "save" | "watched" | "like") {
+    if (action === "watched" && !canMarkWatched) return;
     if (locks.current.has(action)) return;
     if (!isAuthenticated) {
       dialog.current?.close();
@@ -102,7 +107,7 @@ export function PosterActions({ id, type, title, posterUrl, rating, saved, savin
 
   const numericRating = typeof rating === "number" && Number.isFinite(rating) ? rating : null;
   const displayRating = numericRating !== null && numericRating > 0 && numericRating <= 10 ? numericRating.toFixed(1) : null;
-  // No votes yet means the title is unreleased: nothing to rate and nothing to mark watched.
+  // The zero-vote label is independent of release eligibility.
   const isNew = numericRating === 0;
 
   const actions = [
@@ -112,7 +117,7 @@ export function PosterActions({ id, type, title, posterUrl, rating, saved, savin
       label: !watched.enabled ? `Watched tracking unavailable for ${title}` : !watched.ready && watched.error ? `Retry watched status for ${title}` : watched.watched ? `Mark ${title} as unwatched` : `Mark ${title} as watched`, tooltip: !watched.enabled ? "Watched unavailable" : !watched.ready && watched.error ? "Retry watched status" : watched.watched ? "Watched" : "Mark as watched", Icon: CircleCheck },
     { key: "like" as const, active: isLiked, busy: !!liking || !!pending.like, disabled: isAuthenticated && !onToggleLike && !favorites.ready,
       label: isLiked ? `Unlike ${title}` : `Like ${title}`, tooltip: isLiked ? "Liked" : "Like", Icon: Heart },
-  ].filter(action => !(isNew && action.key === "watched"));
+  ].filter(action => action.key !== "watched" || canMarkWatched);
 
   const save = actions[0];
   const SaveIcon = save.Icon;

@@ -118,6 +118,8 @@ type PublicListItem = {
   title: string;
   poster?: string | null;
   year?: string;
+  releaseDate?: string | null;
+  status?: string | null;
 };
 
 type MoodPersona = {
@@ -259,6 +261,8 @@ async function fetchTmdbListItem(
       title,
       poster: detail.poster_path,
       year: date ? date.slice(0, 4) : undefined,
+      releaseDate: date,
+      status: detail.status,
     };
   } catch {
     return { id, mediaType, title: fallback };
@@ -953,7 +957,7 @@ function PublicListCard({ item }: { item: PublicListItem }) {
         <Link href={href}>{item.title}</Link>
       </p>
       {item.year && <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{item.year}</p>}
-      <PosterActions id={item.id} type={item.mediaType === "TV" ? "tv" : "movie"} title={item.title} posterUrl={poster} />
+      <PosterActions id={item.id} type={item.mediaType === "TV" ? "tv" : "movie"} title={item.title} releaseDate={item.releaseDate} status={item.status} posterUrl={poster} />
     </article>
   );
 }

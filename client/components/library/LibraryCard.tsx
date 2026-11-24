@@ -111,6 +111,8 @@ export function LibraryCard({
             type={entry.kind}
             title={title}
             rating={entry.summary?.vote_average}
+            releaseDate={entry.kind === "tv" ? entry.summary?.first_air_date || entry.summary?.release_date : entry.summary?.release_date}
+            status={entry.summary?.status}
             posterUrl={tmdbImage(entry.summary?.poster_path, "w154")}
             {...(kind === "watchlist"
               ? { saved: true, saving: busy, onToggleSave: onRemove }

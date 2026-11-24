@@ -637,7 +637,7 @@ export function HeroContentCard({
                 <span className="sr-only sm:not-sr-only">{inLiked ? "Liked" : "Like"}</span>
               </button>
               {contentId ? (
-                <WatchedTitleButton id={Number(contentId)} type={contentType === "tv" ? "tv" : "movie"} />
+                <WatchedTitleButton id={Number(contentId)} type={contentType} releaseDate={tvInfo?.first_air_date || data?.info.release_date} status={data?.info.status} />
               ) : null}
               {contentId ? (
                 <button type="button" onClick={() => setIsSnapshotOpen(true)} className="ui-secondary-action leading-none" aria-label="Share content snapshot">

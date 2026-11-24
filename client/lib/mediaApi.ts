@@ -11,6 +11,7 @@ export type MediaSummary = {
   vote_count: number;
   release_date: string | null;
   first_air_date: string | null;
+  status?: string | null;
   genres: string[];
   popularity: number;
 };
@@ -54,7 +55,9 @@ function normalizeSummary(
   if (!Number.isFinite(id) || id <= 0) return null;
 
   const title = asString(info.title) || asString(info.name) || `${kind === "tv" ? "Series" : "Movie"} #${id}`;
-  const releaseDate = asString(info.release_date) || asString(info.first_air_date) || null;
+  const releaseDate = kind === "tv"
+    ? asString(info.first_air_date) || asString(info.release_date) || null
+    : asString(info.release_date) || null;
 
   return {
     id,
@@ -67,6 +70,7 @@ function normalizeSummary(
     vote_count: asNumber(info.vote_count),
     release_date: kind === "movie" ? releaseDate : null,
     first_air_date: kind === "tv" ? releaseDate : null,
+    status: asString(info.status) || null,
     genres: asStringArray(info.genres).length
       ? asStringArray(info.genres)
       : Array.isArray(info.genres)

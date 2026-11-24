@@ -35,6 +35,7 @@ type MediaItem = {
   vote_average?: number | null;
   release_date?: string | null;
   first_air_date?: string | null;
+  status?: string | null;
   year?: number | string | null;
   overview?: string | null;
   genres?: string[];
@@ -364,6 +365,8 @@ export default function CardCarousel<T extends MediaItem>({
                     </p>
                   </IntentPrefetchLink>
                   <PosterActions rating={rating}
+                    releaseDate={type === "tv" ? item.first_air_date || item.release_date : item.release_date}
+                    status={item.status}
                     id={item.id}
                     type={type}
                     title={titleText}

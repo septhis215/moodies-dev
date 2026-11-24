@@ -32,6 +32,7 @@ interface MediaItem {
   backdrop_path?: string;
   release_date?: string;
   first_air_date?: string;
+  status?: string | null;
   vote_average: number;
   vote_count: number;
   popularity: number;
@@ -418,6 +419,8 @@ export function CategoryContent({
                         ) : null}
                       </Link>
                       <PosterActions rating={item.vote_average}
+                        releaseDate={item.type === "tv" ? item.first_air_date || item.release_date : item.release_date}
+                        status={item.status}
                         id={item.id}
                         type={item.type}
                         title={getTitle(item)}
