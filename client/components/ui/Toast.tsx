@@ -72,6 +72,7 @@ const Toast: React.FC<ToastProps> = ({
   loading = false,
   createdAt,
 }) => {
+  const [failedPosterUrl, setFailedPosterUrl] = React.useState<string | null>(null);
   const pauseReasons = React.useRef(new Set<"pointer" | "focus">());
   const remainingRef = React.useRef(duration ?? 0);
   const startedAtRef = React.useRef<number | null>(null);
@@ -158,31 +159,13 @@ const Toast: React.FC<ToastProps> = ({
     >
       <span className="sr-only">{loading ? "Loading" : meta.label}: </span>
       <div className={styles.icon} aria-hidden="true">
-        <Icon className={cn("h-5 w-5", loading && styles.spinner)} />
+        <Icon className={cn("h-4 w-4", loading && styles.spinner)} />
       </div>
 
       <div className={styles.content}>
-        {posterUrl && (
-          <div className={styles.poster}>
-            <img
-              src={posterUrl}
-              alt=""
-              className="h-full w-full object-contain"
-              style={
-                imageSize
-                  ? {
-                      width: imageSize.width,
-                      height: imageSize.height,
-                      objectFit: "contain",
-                    }
-                  : undefined
-              }
-            />
-          </div>
-        )}
         <div className={styles.copy}>
-          {title && <div className={styles.title}>{title}</div>}
-          <div className={styles.message}>{message}</div>
+          {title && <p className={styles.title} data-toast-title>{title}</p>}
+          <p className={styles.message} data-toast-message>{message}</p>
           {action && (
             <button
               type="button"
@@ -196,6 +179,26 @@ const Toast: React.FC<ToastProps> = ({
             </button>
           )}
         </div>
+        {posterUrl && posterUrl !== failedPosterUrl && (
+          <div className={styles.poster}>
+            <img
+              src={posterUrl}
+              key={posterUrl}
+              alt=""
+              onError={() => setFailedPosterUrl(posterUrl)}
+              className="h-full w-full object-contain"
+              style={
+                imageSize
+                  ? {
+                      width: imageSize.width,
+                      height: imageSize.height,
+                      objectFit: "contain",
+                    }
+                  : undefined
+              }
+            />
+          </div>
+        )}
       </div>
 
       <button
@@ -204,7 +207,7 @@ const Toast: React.FC<ToastProps> = ({
         aria-label="Dismiss notification"
         className={styles.dismiss}
       >
-        <X className="h-4 w-4" aria-hidden />
+        <span className={styles.dismissIcon}><X className="h-4 w-4" aria-hidden /></span>
       </button>
     </div>
   );

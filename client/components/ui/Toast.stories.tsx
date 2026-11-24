@@ -26,8 +26,18 @@ export const Success: Story = {
 
 export const Warning: Story = {
   args: {
-    message: 'Sign in to keep building your list',
+    message: 'Sign in to save this title.',
     variant: 'warning',
+    action: { label: 'Sign in', onClick: fn() },
+  },
+};
+
+export const WithTitle: Story = {
+  args: {
+    title: 'Watchlist not updated',
+    message: 'Try saving this title again.',
+    variant: 'error',
+    action: { label: 'Try again', onClick: fn() },
   },
 };
 
@@ -61,9 +71,8 @@ export const LongMessage: Story = {
 
 export const WithPoster: Story = {
   args: {
-    title: 'Saved',
-    message: 'Mood recommendation added',
+    title: 'Dune',
+    message: 'Added to your watchlist.',
     posterUrl: '/placeholder-poster.svg',
-    imageSize: { width: 30, height: 42 },
   },
 };

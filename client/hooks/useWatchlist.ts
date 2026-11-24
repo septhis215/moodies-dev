@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   toggleWatchlist,
   type WatchType,
@@ -17,6 +18,7 @@ type ToastMeta = {
 };
 
 export function useWatchlist() {
+  const router = useRouter();
   const { isAuthenticated, watchlist } = useAuth();
   const [error, setError] = useState("");
 
@@ -33,9 +35,9 @@ export function useWatchlist() {
   const add = useCallback(
     async (tmdbId: string | number, type: WatchType, meta?: ToastMeta) => {
       if (!isAuthenticated) {
-        appToast.warning("Sign in to save this to your watchlist.", {
+        appToast.warning("Sign in to save this title.", {
           id: "watchlist-auth-required",
-          title: "Sign in needed",
+          action: { label: "Sign in", onClick: () => router.push("/auth/login") },
         });
         return;
       }
@@ -66,15 +68,15 @@ export function useWatchlist() {
         throw e;
       }
     },
-    [isAuthenticated, watchlist],
+    [isAuthenticated, watchlist, router],
   );
 
   const remove = useCallback(
     async (tmdbId: string | number, type: WatchType, meta?: ToastMeta) => {
       if (!isAuthenticated) {
-        appToast.warning("Sign in to save this to your watchlist.", {
+        appToast.warning("Sign in to update your watchlist.", {
           id: "watchlist-auth-required",
-          title: "Sign in needed",
+          action: { label: "Sign in", onClick: () => router.push("/auth/login") },
         });
         return;
       }
@@ -105,7 +107,7 @@ export function useWatchlist() {
         throw e;
       }
     },
-    [isAuthenticated, watchlist],
+    [isAuthenticated, watchlist, router],
   );
 
   return {

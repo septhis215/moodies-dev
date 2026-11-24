@@ -7,6 +7,7 @@ import { useWatchlist } from "@/hooks/useWatchlist";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import MediaCard from "@/components/ui/MediaCard";
+import { tmdbImage } from "@/lib/tmdb";
 
 interface CommonCardCarouselProps {
   title: string;
@@ -49,11 +50,13 @@ export default function CommonCardCarousel({
       if (isCurrentlyInWatchlist) {
         await remove(String(itemId), toWatchType(), {
           title,
+          posterUrl: tmdbImage(show.poster_path, "w154"),
           duration: 3500,
         });
       } else {
         await add(String(itemId), toWatchType(), {
           title,
+          posterUrl: tmdbImage(show.poster_path, "w154"),
           duration: 3500,
         });
       }

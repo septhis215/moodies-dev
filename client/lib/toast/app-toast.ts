@@ -11,6 +11,7 @@ const TOAST_DEDUPE_MS = 3000;
 
 let sequence = 0;
 let toasts: AppToastItem[] = [];
+let queuedToasts: AppToastItem[] = [];
 const EMPTY_TOASTS: AppToastItem[] = [];
 const listeners = new Set<() => void>();
 const recentToastKeys = new Map<string, number>();
@@ -58,8 +59,9 @@ function publish(
 ) {
   const id = options.id ?? nextId();
   const existingIndex = toasts.findIndex((toast) => toast.id === id);
+  const queuedIndex = queuedToasts.findIndex((toast) => toast.id === id);
 
-  if (existingIndex === -1 && !shouldShow(variant, message, options)) {
+  if (existingIndex === -1 && queuedIndex === -1 && !shouldShow(variant, message, options)) {
     return id;
   }
 
@@ -67,7 +69,7 @@ function publish(
     id,
     message,
     variant,
-    duration: options.duration ?? (loading ? null : TOAST_DURATIONS[variant]),
+    duration: options.duration !== undefined ? options.duration : (loading ? null : TOAST_DURATIONS[variant]),
     title: options.title ?? null,
     posterUrl: options.posterUrl ?? null,
     imageSize: options.imageSize,
@@ -78,8 +80,12 @@ function publish(
 
   if (existingIndex >= 0) {
     toasts = toasts.map((toast) => (toast.id === id ? item : toast));
+  } else if (queuedIndex >= 0) {
+    queuedToasts = queuedToasts.map((toast) => (toast.id === id ? item : toast));
+  } else if (toasts.length < MAX_VISIBLE_TOASTS) {
+    toasts = [...toasts, item];
   } else {
-    toasts = [...toasts, item].slice(-MAX_VISIBLE_TOASTS);
+    queuedToasts = [...queuedToasts, item];
   }
 
   emitChange();
@@ -110,7 +116,14 @@ export const appToast = {
     return publish("info", message, options, true);
   },
   dismiss(id?: string) {
-    toasts = id ? toasts.filter((toast) => toast.id !== id) : [];
+    if (id) {
+      toasts = toasts.filter((toast) => toast.id !== id);
+      queuedToasts = queuedToasts.filter((toast) => toast.id !== id);
+      toasts = [...toasts, ...queuedToasts.splice(0, MAX_VISIBLE_TOASTS - toasts.length)];
+    } else {
+      toasts = [];
+      queuedToasts = [];
+    }
     emitChange();
   },
   promise<T>(

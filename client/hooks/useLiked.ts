@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { toggleLiked, type LikeType } from "@/utils/likedClient";
 import { useAuth } from "@/app/context/AuthProvider";
 import { handleAppError } from "@/lib/errors";
@@ -14,6 +15,7 @@ type ToastMeta = {
 };
 
 export function useLiked() {
+  const router = useRouter();
   const { isAuthenticated, liked } = useAuth();
 
   const isLiked = useCallback(
@@ -29,9 +31,9 @@ export function useLiked() {
   const like = useCallback(
     async (tmdbId: string | number, type: LikeType, meta?: ToastMeta) => {
       if (!isAuthenticated) {
-        appToast.warning("Sign in to save favorites.", {
+        appToast.warning("Sign in to add favorites.", {
           id: "favorites-auth-required",
-          title: "Sign in needed",
+          action: { label: "Sign in", onClick: () => router.push("/auth/login") },
         });
         return;
       }
@@ -59,15 +61,15 @@ export function useLiked() {
         });
       }
     },
-    [isAuthenticated, liked],
+    [isAuthenticated, liked, router],
   );
 
   const unlike = useCallback(
     async (tmdbId: string | number, type: LikeType, meta?: ToastMeta) => {
       if (!isAuthenticated) {
-        appToast.warning("Sign in to save favorites.", {
+        appToast.warning("Sign in to update your favorites.", {
           id: "favorites-auth-required",
-          title: "Sign in needed",
+          action: { label: "Sign in", onClick: () => router.push("/auth/login") },
         });
         return;
       }
@@ -95,7 +97,7 @@ export function useLiked() {
         });
       }
     },
-    [isAuthenticated, liked],
+    [isAuthenticated, liked, router],
   );
 
   return {
