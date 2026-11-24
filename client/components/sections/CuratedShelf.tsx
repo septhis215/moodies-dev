@@ -124,7 +124,7 @@ export function CuratedShelf({
         </div>
       )}
 
-      <div className="mb-2 mt-4 flex items-center justify-between gap-2">
+      <div className="mb-2 mt-4 flex items-center gap-2">
         <div role="group" aria-label="Filter your curated picks" className="flex min-w-0 flex-wrap gap-1">
           {filters.map(({ value, label }) => (
             <button
@@ -143,45 +143,47 @@ export function CuratedShelf({
             </button>
           ))}
         </div>
+      </div>
+      <div className="relative">
         {(canScrollLeft || canScrollRight) && (
-          <div className="flex gap-1" role="group" aria-label="Curated pick navigation">
-            <CarouselNavButton variant="inline" direction="previous" aria-label="Previous curated picks" aria-controls={railId} disabled={!canScrollLeft} onClick={() => scroll(-1)} />
-            <CarouselNavButton variant="inline" direction="next" aria-label="Next curated picks" aria-controls={railId} disabled={!canScrollRight} onClick={() => scroll(1)} />
+          <div role="group" aria-label="Curated pick navigation">
+            <CarouselNavButton direction="previous" aria-label="Previous curated picks" aria-controls={railId} disabled={!canScrollLeft} onClick={() => scroll(-1)} />
+            <CarouselNavButton direction="next" aria-label="Next curated picks" aria-controls={railId} disabled={!canScrollRight} onClick={() => scroll(1)} />
           </div>
         )}
-      </div>
-      <div id={railId} ref={containerRef} role="group" aria-label="Your curated picks" className={railClass} data-curated-rail>
-        {picks.map((item, index) => {
-          const key = pickKey(item);
-          const title = pickTitle(item);
-          return (
-            <button
-              key={key}
-              type="button"
-              aria-label={`Preview ${title}`}
-              aria-pressed={selected === item}
-              onClick={(event) => {
-                setSelection({ key, index });
-                if (event.detail === 0) {
-                  requestAnimationFrame(() => detailsRef.current?.focus());
-                }
-              }}
-              className={`${pickClass} group text-left text-[var(--ink-muted)] hover:text-[var(--ink)] focus-visible:outline-none aria-pressed:text-[var(--ink)]`}
-            >
-              <span className="relative block aspect-video overflow-hidden rounded-lg bg-[var(--surface-2)]">
-                {item.backdrop_path ? (
-                  <TmdbImage src={tmdbImage(item.backdrop_path, "backdropCard")} alt="" fill sizes="(max-width: 639px) 43vw, (max-width: 1023px) 28vw, 240px" className="object-cover" />
-                ) : (
-                  <span className="absolute inset-y-0 right-2 aspect-[2/3]">
-                    <TmdbImage src={tmdbImage(item.poster_path, "posterSmall") || "/placeholder-poster.svg"} alt="" fill sizes="96px" className="object-cover" />
-                  </span>
-                )}
-                <span aria-hidden="true" className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/10 group-hover:ring-white/50 group-focus-visible:ring-2 group-focus-visible:ring-[var(--brand-coral-strong)] group-aria-pressed:ring-2 group-aria-pressed:ring-[var(--brand-coral-strong)]" />
-              </span>
-              <span className="mt-1.5 block truncate text-sm font-semibold">{title}</span>
-            </button>
-          );
-        })}
+        <div id={railId} ref={containerRef} role="group" aria-label="Your curated picks" className={railClass} data-curated-rail>
+          {picks.map((item, index) => {
+            const key = pickKey(item);
+            const title = pickTitle(item);
+            return (
+              <button
+                key={key}
+                type="button"
+                aria-label={`Preview ${title}`}
+                aria-pressed={selected === item}
+                onClick={(event) => {
+                  setSelection({ key, index });
+                  if (event.detail === 0) {
+                    requestAnimationFrame(() => detailsRef.current?.focus());
+                  }
+                }}
+                className={`${pickClass} group text-left text-[var(--ink-muted)] hover:text-[var(--ink)] focus-visible:outline-none aria-pressed:text-[var(--ink)]`}
+              >
+                <span className="relative block aspect-video overflow-hidden rounded-lg bg-[var(--surface-2)]">
+                  {item.backdrop_path ? (
+                    <TmdbImage src={tmdbImage(item.backdrop_path, "backdropCard")} alt="" fill sizes="(max-width: 639px) 43vw, (max-width: 1023px) 28vw, 240px" className="object-cover" />
+                  ) : (
+                    <span className="absolute inset-y-0 right-2 aspect-[2/3]">
+                      <TmdbImage src={tmdbImage(item.poster_path, "posterSmall") || "/placeholder-poster.svg"} alt="" fill sizes="96px" className="object-cover" />
+                    </span>
+                  )}
+                  <span aria-hidden="true" className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/10 group-hover:ring-white/50 group-focus-visible:ring-2 group-focus-visible:ring-[var(--brand-coral-strong)] group-aria-pressed:ring-2 group-aria-pressed:ring-[var(--brand-coral-strong)]" />
+                </span>
+                <span className="mt-1.5 block truncate text-sm font-semibold">{title}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
