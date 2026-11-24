@@ -407,6 +407,8 @@ body {
     overflow-wrap: anywhere;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+    /* Reserve both lines so one long title cannot push its card footer out of line. */
+    min-height: 2.5rem;
     margin-top: 0.625rem;
     color: var(--ink);
     font-size: 0.875rem;

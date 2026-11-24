@@ -85,6 +85,15 @@ try {
     assert.ok(moreBox.x + moreBox.width <= artwork.x + artwork.width, "Action row fits the card");
     const rating = await first.getByLabel("Rating: 8.1 out of 10").boundingBox();
     assert.ok(rating.x < row.x && Math.abs(rating.y + rating.height / 2 - row.y - row.height / 2) < 1, "Inline rating aligns left of the icon pair");
+    const upcoming = cards.nth(1);
+    assert.equal((await upcoming.getByLabel("New title, not yet rated").innerText()).toLowerCase(), "new", "Unrated titles are labelled New");
+    await upcoming.getByRole("button", { name: /^More actions/ }).click();
+    const upcomingModal = upcoming.getByRole("dialog");
+    await upcomingModal.waitFor();
+    assert.equal(await upcomingModal.locator('[data-action="watched"]').count(), 0, "Unrated titles cannot be marked watched");
+    await page.keyboard.press('Escape');
+    await upcomingModal.waitFor({ state: 'hidden' });
+    assert.equal(await metadata.height, 40, "Two title lines stay reserved so card footers line up");
     assert.equal(await save.innerText(), '', "Save stays icon only");
     assert.equal(await more.innerText(), '', "More stays icon only");
     assert.equal(await save.evaluate(element => getComputedStyle(element).backgroundColor), 'rgba(0, 0, 0, 0)', "Actions have no permanent fill");

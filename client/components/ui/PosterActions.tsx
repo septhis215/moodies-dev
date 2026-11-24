@@ -100,6 +100,11 @@ export function PosterActions({ id, type, title, posterUrl, rating, saved, savin
     }
   }
 
+  const numericRating = typeof rating === "number" && Number.isFinite(rating) ? rating : null;
+  const displayRating = numericRating !== null && numericRating > 0 && numericRating <= 10 ? numericRating.toFixed(1) : null;
+  // No votes yet means the title is unreleased: nothing to rate and nothing to mark watched.
+  const isNew = numericRating === 0;
+
   const actions = [
     { key: "save" as const, active: isSaved, busy: !!saving || !!pending.save, disabled: isAuthenticated && !onToggleSave && !watchlist.ready,
       label: saveLabel ?? (isSaved ? `Remove ${title} from My List` : `Save ${title} to My List`), tooltip: isSaved ? "Saved" : "Save", Icon: isSaved ? BookmarkCheck : Bookmark },
@@ -107,16 +112,15 @@ export function PosterActions({ id, type, title, posterUrl, rating, saved, savin
       label: !watched.enabled ? `Watched tracking unavailable for ${title}` : !watched.ready && watched.error ? `Retry watched status for ${title}` : watched.watched ? `Mark ${title} as unwatched` : `Mark ${title} as watched`, tooltip: !watched.enabled ? "Watched unavailable" : !watched.ready && watched.error ? "Retry watched status" : watched.watched ? "Watched" : "Mark as watched", Icon: CircleCheck },
     { key: "like" as const, active: isLiked, busy: !!liking || !!pending.like, disabled: isAuthenticated && !onToggleLike && !favorites.ready,
       label: isLiked ? `Unlike ${title}` : `Like ${title}`, tooltip: isLiked ? "Liked" : "Like", Icon: Heart },
-  ];
+  ].filter(action => !(isNew && action.key === "watched"));
 
   const save = actions[0];
   const SaveIcon = save.Icon;
-  const displayRating = typeof rating === "number" && Number.isFinite(rating) && rating > 0 && rating <= 10 ? rating.toFixed(1) : null;
 
   return (
     <div className={cn(styles.actions, className)} role="group" aria-label={`Actions for ${title}`}>
       <div className={styles.row}>
-        {displayRating && <span className={styles.rating} aria-label={`Rating: ${displayRating} out of 10`}><Star aria-hidden="true" fill="currentColor" />{displayRating}</span>}
+        {displayRating ? <span className={styles.rating} aria-label={`Rating: ${displayRating} out of 10`}><Star aria-hidden="true" fill="currentColor" />{displayRating}</span> : isNew ? <span className={styles.new} aria-label="New title, not yet rated">New</span> : null}
         <div className={styles.controls}>
         <button type="button" className={cn(styles.action, styles.save)} data-action="save" data-active={save.active} aria-label={save.label} aria-pressed={save.active} aria-busy={save.busy} disabled={save.busy || save.disabled} onClick={() => void run("save")}>
           {save.busy ? <LoaderCircle className={styles.spinner} aria-hidden="true" /> : <SaveIcon aria-hidden="true" fill={save.active ? "currentColor" : "none"} />}

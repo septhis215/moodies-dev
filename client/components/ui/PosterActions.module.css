@@ -1,7 +1,9 @@
 .actions { margin-top: 0.25rem; min-width: 0; container-type: inline-size; }
 .row { display: flex; align-items: center; flex-wrap: wrap; min-width: 0; gap: 4px; }
-.rating { display: inline-flex; align-items: center; gap: 2px; margin-right: auto; color: var(--ink-muted); font-size: 0.75rem; font-weight: 500; line-height: 1.5; }
-.rating svg { width: 12px; height: 12px; color: var(--brand-gold); }
+.rating { display: inline-flex; align-items: center; gap: 4px; margin-right: auto; color: var(--ink-muted); font-size: 0.75rem; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
+/* 10px keeps the star's ink the same height as the 12px numerals' cap height. */
+.rating svg { display: block; flex-shrink: 0; width: 10px; height: 10px; color: var(--brand-gold); }
+.new { display: inline-flex; align-items: center; margin-right: auto; color: var(--brand-gold); font-size: 0.6875rem; font-weight: 700; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase; }
 .controls { display: flex; flex-shrink: 0; margin-left: auto; gap: 0; }
 .action {
   display: inline-flex;
