@@ -131,7 +131,7 @@ export default function ImageVideoCarousel({
       aria-labelledby="media-archive-heading"
     >
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <SectionHeader id="media-archive-heading" title="Media archive" />
+        <SectionHeader id="media-archive-heading" eyebrow="Gallery" title="Media archive" />
 
         <div className="flex items-center gap-3 text-xs text-[var(--ink-muted)]">
           <div className="flex flex-wrap gap-1" role="group" aria-label="Media type">

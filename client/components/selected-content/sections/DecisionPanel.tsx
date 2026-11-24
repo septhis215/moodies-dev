@@ -36,17 +36,18 @@ export default function DecisionPanel({
   return (
     <section className="relative isolate overflow-hidden bg-surface-0" aria-labelledby="decision-heading">
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        {info.backdrop_path ? (
-          <Image src={tmdbImage(info.backdrop_path, "original")} alt="" fill sizes="100vw" className="object-cover" />
-        ) : null}
-        {firstTrailer?.key ? <TrailerBackground videoKey={firstTrailer.key} /> : null}
-        <div className="absolute inset-0 bg-surface-0/85" />
-        <div className="absolute inset-0 bg-gradient-to-b from-surface-0 via-transparent to-surface-0" />
+        <div className="absolute inset-0 opacity-35">
+          {info.backdrop_path ? (
+            <Image src={tmdbImage(info.backdrop_path, "original")} alt="" fill sizes="100vw" className="object-cover" />
+          ) : null}
+          {firstTrailer?.key ? <TrailerBackground videoKey={firstTrailer.key} /> : null}
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-b from-surface-0 via-surface-0/70 to-surface-0 sm:via-surface-0/55" />
       </div>
       <div className="ui-shell relative py-8 sm:py-10">
         <div className="mb-5 flex flex-col gap-5 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <p className="ui-kicker">Community perspective</p>
+            <p className="ui-kicker">Audience verdict</p>
             <h2 id="decision-heading" className="mt-2 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
               Does this fit your mood?
             </h2>

@@ -102,7 +102,7 @@ function ScoreCard({
         {label}
       </p>
       <p
-        className="mt-2 text-2xl font-bold leading-none tabular-nums text-[var(--ink)]"
+        className="mt-2 text-2xl font-bold leading-none tabular-nums text-[var(--brand-gold)]"
       >
         {displayScore}
         {hasScore ? (
@@ -528,7 +528,7 @@ export function HeroContentCard({
       className="relative isolate overflow-hidden bg-surface-0"
       aria-labelledby="content-title"
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[36rem] opacity-40">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[40rem] sm:h-[46rem] lg:h-[52rem]">
         <Image
           src={mappedContent.backdrop}
           alt=""
@@ -536,10 +536,11 @@ export function HeroContentCard({
           sizes="100vw"
           priority
           aria-hidden="true"
-          className="object-cover object-[center_24%]"
+          className="object-cover object-[center_22%] opacity-70"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-surface-0 via-surface-0/85 to-surface-0/55" />
-        <div className="absolute inset-0 bg-gradient-to-b from-surface-0/55 via-transparent to-surface-0" />
+        <div className="absolute inset-0 bg-gradient-to-r from-surface-0 via-surface-0/75 to-surface-0/25" />
+        <div aria-hidden="true" className={`${styles.ambient} absolute inset-0`} />
+        <div aria-hidden="true" className="homepage-hero-fade absolute inset-0" />
       </div>
 
       <div className="ui-shell relative pt-[calc(2rem+var(--mobile-nav-safe))] pb-8 sm:pt-[calc(2.5rem+var(--mobile-nav-safe))] sm:pb-10 lg:pt-[calc(3rem+6rem)] lg:pb-12">
@@ -607,7 +608,7 @@ export function HeroContentCard({
               </p>
             ) : null}
 
-            <div className={`${styles.ratings} mt-6 flex flex-wrap gap-x-8 gap-y-4`} aria-label="Audience ratings">
+            <div className={`${styles.ratings} mt-6 flex flex-wrap gap-x-10 gap-y-4`} aria-label="Audience ratings">
               <ScoreCard
                 label="Moodies"
                 logo="/images/moodies-transparent.png"

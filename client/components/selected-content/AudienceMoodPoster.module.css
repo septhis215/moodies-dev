@@ -8,6 +8,17 @@
   isolation: isolate;
 }
 
+.scene::before {
+  content: "";
+  position: absolute;
+  inset: 8% 10% 10% var(--peek-gutter);
+  z-index: 0;
+  border-radius: 2rem;
+  background: radial-gradient(ellipse at 50% 35%, rgb(230 182 92 / 22%), rgb(240 100 75 / 12%) 48%, transparent 72%);
+  filter: blur(26px);
+  pointer-events: none;
+}
+
 .artwork {
   position: relative;
   z-index: 1;
@@ -16,7 +27,7 @@
   overflow: hidden;
   border-radius: 1rem;
   background: var(--surface-1);
-  box-shadow: 0 8px 20px rgb(0 0 0 / 20%);
+  box-shadow: 0 18px 44px -14px rgb(0 0 0 / 70%), 0 0 0 1px rgb(245 241 237 / 12%);
 }
 
 .reveal {

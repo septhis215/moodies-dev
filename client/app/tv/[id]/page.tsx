@@ -219,7 +219,7 @@ export default async function TvPage({
       >
         <CommonCardCarousel
           title="If this landed for you"
-          showHeader={false}
+          subtitle="More titles picked from the same mood."
           type="tv"
           items={recommendations ?? []}
         />

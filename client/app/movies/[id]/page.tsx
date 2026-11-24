@@ -173,7 +173,7 @@ export default async function MoviePage({
       >
         <CommonCardCarousel
           title="If this landed for you"
-          showHeader={false}
+          subtitle="More titles picked from the same mood."
           type="movie"
           items={recommendations ?? []}
         />

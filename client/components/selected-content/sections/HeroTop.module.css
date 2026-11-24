@@ -1,4 +1,29 @@
-.scoreBrand { display: none; }
+.ambient {
+  background:
+    radial-gradient(ellipse 60% 45% at 16% 2%, rgb(230 182 92 / 14%), transparent 68%),
+    radial-gradient(ellipse 52% 42% at 92% 26%, rgb(240 100 75 / 12%), transparent 72%);
+}
+
+.scoreBrand {
+  display: flex;
+  height: 1.75rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.scoreLogo {
+  width: 3rem;
+  height: 2rem;
+  object-fit: contain;
+}
+
+/* The shared Moodies asset includes generous transparent padding. */
+.scoreCard:first-child .scoreLogo {
+  width: 4rem;
+  height: 4rem;
+  max-width: none;
+  margin-inline: -0.5rem;
+}
 
 @media (width < 640px) {
   .ratings {
@@ -17,7 +42,7 @@
 
   .scoreCard { min-width: 0; padding-inline: 0.75rem; }
   .scoreCard + .scoreCard { border-left: 1px solid var(--surface-border); }
-  .scoreBrand { display: flex; height: 2.5rem; align-items: center; justify-content: center; }
+  .scoreBrand { display: flex; height: 2.5rem; justify-content: center; margin-bottom: 0; }
   .scoreLogo { width: 3.5rem; height: 2.5rem; object-fit: contain; }
   /* The shared Moodies asset includes generous transparent padding. */
   .scoreCard:first-child .scoreLogo { width: 6rem; height: 6rem; max-width: none; }

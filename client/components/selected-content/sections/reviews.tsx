@@ -162,6 +162,7 @@ export default function ReviewsSection({
         <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <SectionHeader
             id="reviews-heading"
+            eyebrow="Community"
             title="Audience Reviews"
             description={sorted.length ? `${sorted.length} review${sorted.length === 1 ? "" : "s"} from the community` : undefined}
           />
@@ -198,10 +199,10 @@ export default function ReviewsSection({
                 initial={reducedMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: reducedMotion ? 0 : 0.18 }}
-                className="col-span-full flex flex-col items-center justify-center gap-4 py-12 sm:py-16"
+                className="col-span-full flex flex-col items-center justify-center gap-5 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] px-6 py-8 sm:flex-row sm:justify-start sm:gap-6 sm:py-10"
               >
-                <BadgeMascot name="conversation-starter" className="h-24 w-24" sizes="96px" />
-                <div className="text-center">
+                <BadgeMascot name="conversation-starter" className="h-20 w-20 shrink-0" sizes="80px" />
+                <div className="flex-1 text-center sm:text-left">
                   <p className="text-sm font-semibold text-[var(--ink)]">
                     No reviews yet
                   </p>

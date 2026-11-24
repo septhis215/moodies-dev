@@ -83,18 +83,12 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
       className="ui-shell scroll-mt-24 py-8 sm:py-10"
       aria-labelledby="details-heading"
     >
-      <header className="max-w-2xl">
-        <h2
-          id="details-heading"
-          className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
-        >
-          The making of it
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
-          A useful credit trail, followed by where the title is made and where
-          it may be available.
-        </p>
-      </header>
+      <SectionHeader
+        id="details-heading"
+        eyebrow="Credits"
+        title="The making of it"
+        description="A useful credit trail, followed by where the title is made and where it may be available."
+      />
 
       {credits.cast.length > 0 ? (
         <div className="mt-8 sm:mt-10">
