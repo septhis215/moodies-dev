@@ -66,6 +66,11 @@ export class AchievementsController {
       body.timezone,
     );
   }
+  @Get('watched')
+  @Header('Cache-Control', 'no-store')
+  watchedTitles(@Req() req: IdentityRequest) {
+    return this.achievements.watchedTitles(this.user(req));
+  }
   @Get('watched/:type/:id')
   @Header('Cache-Control', 'no-store')
   watched(

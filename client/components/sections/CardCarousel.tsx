@@ -13,8 +13,7 @@ import {
 } from "lucide-react";
 import { tmdbImage } from "@/lib/tmdb";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
-import { PosterSaveButton } from "@/components/ui/PosterSaveButton";
-import { RatingBadge } from "@/components/ui/rating-badge";
+import { PosterActions } from "@/components/ui/PosterActions";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
@@ -355,13 +354,6 @@ export default function CardCarousel<T extends MediaItem>({
                         ) : null}
                       </div>
                     </div>
-                    <RatingBadge rating={rating} placement="poster" />
-                    <PosterSaveButton
-                      title={titleText}
-                      saved={saved}
-                      saving={loading}
-                      onClick={() => toggleSaved(item)}
-                    />
                   </div>
                   <IntentPrefetchLink href={href} className="ui-card-link block">
                     <h3 className="ui-poster-title">
@@ -371,6 +363,15 @@ export default function CardCarousel<T extends MediaItem>({
                       {type === "tv" ? "Series" : "Movie"} · {itemYear(item) || "Date TBA"}
                     </p>
                   </IntentPrefetchLink>
+                  <PosterActions rating={rating}
+                    id={item.id}
+                    type={type}
+                    title={titleText}
+                    posterUrl={itemPoster(item)}
+                    saved={saved}
+                    saving={loading}
+                    onToggleSave={() => toggleSaved(item)}
+                  />
                 </article>
               );
             })}

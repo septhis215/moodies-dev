@@ -13,10 +13,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowUpRight,
-  Bookmark,
-  BookmarkCheck,
   Search,
-  Star,
 } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import PageSkeleton from "@/components/loading/PageSkeleton";
@@ -30,6 +27,7 @@ import type { CelebrityPhoto } from "@/types/celebrityMedia";
 import CustomSelect from "@/components/ui/custom-select";
 import CelebrityProfileNav from "@/components/celeb/CelebrityProfileNav";
 import CelebrityNewsFeed from "@/components/celeb/CelebrityNewsFeed";
+import { PosterActions } from "@/components/ui/PosterActions";
 
 interface Credit {
   id: number;
@@ -217,22 +215,6 @@ function CreditCard({
             className="object-cover transition-transform duration-300 motion-safe:group-hover:scale-105"
           />
         </Link>
-        <button
-          type="button"
-          onClick={() => onSave(credit)}
-          disabled={busy}
-          aria-label={`${saved ? "Remove" : "Save"} ${getTitle(credit)} ${saved ? "from" : "to"} your watchlist`}
-          aria-pressed={saved}
-          className={`absolute right-2 top-2 grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-black/75 transition-colors hover:bg-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] disabled:cursor-wait disabled:opacity-60 ${saved ? "text-[var(--brand-coral-strong)]" : "text-white"}`}
-        >
-          {busy ? (
-            <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent motion-safe:animate-spin" />
-          ) : saved ? (
-            <BookmarkCheck className="h-5 w-5" aria-hidden="true" />
-          ) : (
-            <Bookmark className="h-5 w-5" aria-hidden="true" />
-          )}
-        </button>
       </div>
       <h3 className="mt-3 min-h-10 line-clamp-2 break-words text-sm font-semibold leading-5 text-[var(--ink)]">
         <Link
@@ -245,24 +227,21 @@ function CreditCard({
       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-[var(--ink-muted)]">
         <span>{getYear(credit)}</span>
         <span>{credit.media_type === "tv" ? "Series" : "Movie"}</span>
-        {!!credit.vote_average && (
-          <span
-            className="inline-flex items-center gap-1"
-            aria-label={`TMDB rating ${credit.vote_average.toFixed(1)} out of 10`}
-          >
-            <Star
-              className="h-3 w-3 text-[var(--brand-gold)]"
-              aria-hidden="true"
-            />
-            {credit.vote_average.toFixed(1)}
-          </span>
-        )}
       </div>
       {credit.character && (
         <p className="mt-1 line-clamp-1 text-xs leading-5 text-[var(--ink-muted)]">
           {credit.character}
         </p>
       )}
+      <PosterActions rating={credit.vote_average}
+        id={credit.id}
+        type={credit.media_type === "tv" ? "tv" : "movie"}
+        title={getTitle(credit)}
+        posterUrl={tmdbImage(credit.poster_path, "w342")}
+        saved={saved}
+        saving={busy}
+        onToggleSave={() => onSave(credit)}
+      />
     </article>
   );
 }

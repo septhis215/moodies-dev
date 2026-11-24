@@ -1,7 +1,7 @@
 .posterRating {
   position: absolute;
   top: 0.875rem;
-  right: 0.875rem;
+  left: 0.875rem;
   z-index: 20;
   height: 2rem;
 }
@@ -30,7 +30,7 @@
 }
 .newBadge.posterRibbon {
   position: absolute;
-  inset: 0.75rem 0 auto auto;
+  inset: 0.75rem auto auto 0;
   z-index: 11;
   min-height: 1.75rem;
   padding: 0.5rem 0.875rem 0.5rem 1.25rem;

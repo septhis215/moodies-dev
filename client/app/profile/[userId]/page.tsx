@@ -4,6 +4,7 @@ import { tmdbImage } from "@/lib/tmdb";
 import React, { useEffect, useMemo, useState } from "react";
 import PageSkeleton from "@/components/loading/PageSkeleton";
 import Link from "next/link";
+import { PosterActions } from "@/components/ui/PosterActions";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { useParams } from "next/navigation";
 import {
@@ -927,11 +928,11 @@ function PublicListCard({ item }: { item: PublicListItem }) {
   const poster = posterSrc(item.poster);
 
   return (
-    <Link
-      href={href}
+    <article
       className="group min-w-0 border border-[var(--surface-border)] bg-[var(--surface-1)] p-2 transition-[border-color,background-color] hover:border-[var(--brand-coral)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
     >
       <div className="relative aspect-[2/3] overflow-hidden bg-[var(--surface-2)]">
+        <Link href={href} className="absolute inset-0" aria-label={`View ${item.title}`}>
         {poster ? (
           <img
             src={poster}
@@ -946,12 +947,14 @@ function PublicListCard({ item }: { item: PublicListItem }) {
         <span className="absolute left-2 top-2 bg-black/70 px-2 py-1 text-xs font-semibold text-white/88">
           {item.mediaType === "TV" ? "TV" : "Movie"}
         </span>
+        </Link>
       </div>
       <p className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] group-hover:text-[var(--brand-coral-strong)]">
-        {item.title}
+        <Link href={href}>{item.title}</Link>
       </p>
       {item.year && <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{item.year}</p>}
-    </Link>
+      <PosterActions id={item.id} type={item.mediaType === "TV" ? "tv" : "movie"} title={item.title} posterUrl={poster} />
+    </article>
   );
 }
 

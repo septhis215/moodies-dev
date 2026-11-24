@@ -8,9 +8,9 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Film, Trophy, Tv } from "lucide-react";
 import type { All } from "@/types/all";
-import RatingBadge from "../ui/rating-badge";
 import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
 import { useCarouselScroll } from "@/hooks/useCarouselScroll";
+import { PosterActions } from "@/components/ui/PosterActions";
 
 type FootballStory = All & {
   media_type?: "movie" | "tv";
@@ -272,20 +272,19 @@ function FootballCard({ item, index }: { item: FootballStory; index: number }) {
   const relevance = getRelevanceLabel(item, index);
 
   return (
-    <Link
-      href={href}
-      className="group w-[128px] shrink-0 snap-start sm:w-[162px]"
-    >
+    <article className="group w-[128px] shrink-0 snap-start sm:w-[162px]">
       <div className="relative aspect-[2/3] overflow-hidden rounded-lg border border-white/10 bg-white/[0.065] shadow-xl shadow-black/30 backdrop-blur transition duration-300 group-hover:-translate-y-1 group-hover:border-yellow-200/35">
-        <Image
-          src={posterUrl(item.poster_path)}
-          alt={title}
-          fill
-          sizes="(max-width: 640px) 128px, (max-width: 1024px) 28vw, 15vw"
-          className="object-cover transition duration-700 group-hover:scale-110"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-85" />
-        <div className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white shadow-lg shadow-black/30 backdrop-blur sm:px-2 sm:text-[11px]">
+        <Link href={href} aria-label={`Explore ${title}`} className="absolute inset-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)]">
+          <Image
+            src={posterUrl(item.poster_path)}
+            alt={title}
+            fill
+            sizes="(max-width: 640px) 128px, (max-width: 1024px) 28vw, 15vw"
+            className="object-cover transition duration-700 group-hover:scale-110"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+        </Link>
+        <div className="pointer-events-none absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white shadow-lg shadow-black/30 backdrop-blur sm:px-2 sm:text-[11px]">
           {mediaType === "tv" ? (
             <>
               <Tv className="h-3 w-3 text-sky-300" />
@@ -298,22 +297,21 @@ function FootballCard({ item, index }: { item: FootballStory; index: number }) {
             </>
           )}
         </div>
-        <RatingBadge rating={item.vote_average} size="sm" placement="poster" />
-
-        <div className="absolute inset-x-0 bottom-0 p-2.5 sm:p-3">
-          <div className="mb-1.5 inline-flex max-w-full rounded bg-emerald-300/15 px-2 py-0.5 text-[9px] font-bold text-emerald-100 ring-1 ring-emerald-200/20 sm:py-1 sm:text-[10px]">
-            <span className="truncate">{relevance}</span>
-          </div>
-          <h3 className="line-clamp-2 text-xs font-black leading-tight text-white sm:text-sm">
-            {title}
-          </h3>
-          <div className="mt-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-zinc-300 sm:mt-2 sm:gap-2 sm:text-[11px]">
-            {year ? (
-              <span className="inline-flex items-center gap-1">{year}</span>
-            ) : null}
-          </div>
-        </div>
       </div>
-    </Link>
+      <Link href={href} className="block rounded-lg pt-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] sm:pt-3">
+        <div className="mb-1.5 inline-flex max-w-full rounded bg-emerald-300/15 px-2 py-0.5 text-[9px] font-bold text-emerald-100 ring-1 ring-emerald-200/20 sm:py-1 sm:text-[10px]">
+          <span className="truncate">{relevance}</span>
+        </div>
+        <h3 className="line-clamp-2 text-xs font-black leading-tight text-white sm:text-sm">
+          {title}
+        </h3>
+        <div className="mt-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-zinc-300 sm:mt-2 sm:gap-2 sm:text-[11px]">
+          {year ? (
+            <span className="inline-flex items-center gap-1">{year}</span>
+          ) : null}
+        </div>
+      </Link>
+      <PosterActions rating={item.vote_average} id={item.id} type={mediaType} title={title} posterUrl={posterUrl(item.poster_path)} />
+    </article>
   );
 }

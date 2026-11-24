@@ -16,8 +16,7 @@ import { useAuth } from "@/app/context/AuthProvider";
 import { recordAchievementActivity } from "@/lib/achievements";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
-import { RatingBadge } from "@/components/ui/rating-badge";
-import { PosterSaveButton } from "@/components/ui/PosterSaveButton";
+import { PosterActions } from "@/components/ui/PosterActions";
 
 interface Mood {
   id: string;
@@ -570,30 +569,22 @@ export default function MoodRecommendationsSection({
                     transition={{ duration: 0.18 }}
                     className="relative min-w-0 overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)]"
                   >
-                    <Link
-                      href={getMediaHref(rec)}
-                      className="group flex h-full flex-col rounded-xl focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral)]"
-                    >
+                    <div className="group flex h-full flex-col">
                       <div
                         className="relative aspect-[2/3] overflow-hidden bg-[var(--surface-2)]"
                       >
-                        <Image
-                          src={getPosterUrl(rec.posterPath)}
-                          alt={rec.title}
-                          fill
-                          sizes="(max-width: 639px) 45vw, (max-width: 767px) 30vw, (max-width: 1023px) 22vw, (max-width: 1279px) 18vw, 196px"
-                          className="object-cover transition-transform duration-500 group-hover:scale-[1.035] motion-reduce:transform-none motion-reduce:transition-none"
-                        />
-
-                          <RatingBadge
-                            rating={rec.voteAverage}
-                            variant="colored"
-                            size="sm"
-                            placement="poster"
+                        <Link href={getMediaHref(rec)} aria-label={`Explore ${rec.title}`} className="absolute inset-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral)]">
+                          <Image
+                            src={getPosterUrl(rec.posterPath)}
+                            alt={rec.title}
+                            fill
+                            sizes="(max-width: 639px) 45vw, (max-width: 767px) 30vw, (max-width: 1023px) 22vw, (max-width: 1279px) 18vw, 196px"
+                            className="object-cover transition-transform duration-500 group-hover:scale-[1.035] motion-reduce:transform-none motion-reduce:transition-none"
                           />
+                        </Link>
 
-                        <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/65 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-md">
+                        <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/65 px-2 py-1 text-xs font-semibold text-white backdrop-blur-md">
                             <span
                               aria-hidden="true"
                               className="h-1.5 w-1.5 rounded-full"
@@ -604,7 +595,7 @@ export default function MoodRecommendationsSection({
                         </div>
                       </div>
 
-                      <div className="flex flex-1 flex-col p-2.5">
+                      <Link href={getMediaHref(rec)} className="flex flex-1 flex-col p-2.5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral)]">
                         <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
                           {rec.title}
                         </h3>
@@ -616,14 +607,18 @@ export default function MoodRecommendationsSection({
                             {genres.slice(0, 2).join(" · ")}
                           </p>
                         )}
-                      </div>
-                    </Link>
-                    <PosterSaveButton
-                      title={rec.title}
-                      saved={Boolean(inList)}
-                      saving={isBusy}
-                      onClick={() => void toggleWatchlist(rec)}
-                    />
+                      </Link>
+                      <PosterActions rating={rec.voteAverage}
+                        className="mb-2.5"
+                        id={rec.tmdbId}
+                        type={rec.mediaType === "TV" ? "tv" : "movie"}
+                        title={rec.title}
+                        posterUrl={getPosterUrl(rec.posterPath)}
+                        saved={Boolean(inList)}
+                        saving={isBusy}
+                        onToggleSave={() => toggleWatchlist(rec)}
+                      />
+                    </div>
                   </motion.article>
                 );
               })}

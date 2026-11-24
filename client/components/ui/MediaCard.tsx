@@ -3,8 +3,7 @@
 import { PosterSkeleton } from "@/components/loading/PageSkeleton";
 import IntentPrefetchLink from "@/components/ui/IntentPrefetchLink";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
-import { PosterSaveButton } from "@/components/ui/PosterSaveButton";
-import RatingBadge from "@/components/ui/rating-badge";
+import { PosterActions } from "@/components/ui/PosterActions";
 import { tmdbImage } from "@/lib/tmdb";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +25,7 @@ type MediaCardProps = {
   type?: "movie" | "tv";
   saved?: boolean;
   saving?: boolean;
-  onToggleSave?: () => void;
+  onToggleSave?: () => void | Promise<void>;
   actionLabel?: string;
   className?: string;
 };
@@ -39,8 +38,8 @@ function yearOf(item: MediaCardItem): string | null {
 export function MediaCard({
   item,
   type = item.type === "tv" ? "tv" : "movie",
-  saved = false,
-  saving = false,
+  saved,
+  saving,
   onToggleSave,
   actionLabel,
   className,
@@ -50,12 +49,12 @@ export function MediaCard({
   const poster = item.poster_path
     ? tmdbImage(item.poster_path, "w342")
     : "/placeholder-poster.svg";
-  const metadata = [type === "tv" ? "Series" : "Movie", yearOf(item) || "Date TBA"];
+  const year = yearOf(item);
 
   return (
     <article className={cn("group relative min-w-0", className)}>
-      <IntentPrefetchLink href={href} className="ui-card-link block">
-        <div className="ui-media-artwork ui-poster">
+      <div className="relative">
+        <IntentPrefetchLink href={href} aria-label={title} className="ui-card-link ui-media-artwork ui-poster block">
           <Image
             src={poster}
             alt=""
@@ -63,19 +62,18 @@ export function MediaCard({
             sizes="(max-width: 640px) 45vw, (max-width: 1024px) 23vw, 180px"
             className="object-cover motion-safe:transition-transform motion-safe:duration-300 motion-safe:group-hover:scale-[1.025]"
           />
-          <RatingBadge rating={item.vote_average} placement="poster" />
-        </div>
+        </IntentPrefetchLink>
+      </div>
+      <IntentPrefetchLink href={href} tabIndex={-1} className="ui-card-link block">
         <h3 className="ui-poster-title">{title}</h3>
-        <p className="ui-poster-meta">{metadata.join(" · ")}</p>
+        {year && <p className="ui-poster-meta">{year}</p>}
       </IntentPrefetchLink>
-      {onToggleSave && (
-        <PosterSaveButton title={title} saved={saved} saving={saving} onClick={onToggleSave} label={actionLabel} />
-      )}
       {item.reason ? (
         <p className="mt-2 line-clamp-2 text-xs leading-5 text-brand-coral-strong">
           {item.reason}
         </p>
       ) : null}
+      <PosterActions id={item.id} type={type} title={title} rating={item.vote_average} posterUrl={poster} saved={saved} saving={saving} onToggleSave={onToggleSave} saveLabel={actionLabel} />
     </article>
   );
 }

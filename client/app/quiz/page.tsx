@@ -8,6 +8,7 @@ import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
 import type { BadgeMascotName } from "@/lib/badge-mascots";
 import { RatingBadge } from "@/components/ui/rating-badge";
+import { PosterActions } from "@/components/ui/PosterActions";
 import { tmdbImage } from "@/lib/tmdb";
 import { apiRequest } from "@/lib/errors/api-client";
 import { handleAppError } from "@/lib/errors/handle-app-error";
@@ -719,12 +720,12 @@ export default function MovieQuizPage() {
                         </h2>
                         <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-5 xl:grid-cols-4">
                           {remainingPicks.map((item) => (
-                            <button
+                            <article
                               key={`${item.media_type}-${item.id}`}
-                              onClick={() => setSelectedMovie(item)}
-                              className={`group min-w-0 text-left ${focusClass}`}
+                              className="group min-w-0 text-left"
                             >
                               <div className="relative aspect-[2/3] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] transition-colors motion-reduce:transition-none">
+                                <button type="button" onClick={() => setSelectedMovie(item)} className={`absolute inset-0 ${focusClass}`} aria-label={`View ${titleOf(item)}`}>
                                 <Image
                                   src={posterOf(item)}
                                   alt=""
@@ -732,28 +733,20 @@ export default function MovieQuizPage() {
                                   sizes="(max-width: 639px) 44vw, (max-width: 1023px) 28vw, 200px"
                                   className="object-cover"
                                 />
-                                  <RatingBadge
-                                    rating={item.vote_average}
-                                    size="sm"
-                                    placement="poster"
-                                  />
+                                </button>
                               </div>
                               <h3 className="ui-text-reveal mt-2 min-h-10 line-clamp-2 break-words text-sm font-semibold leading-5">
-                                {titleOf(item)}
+                                <button type="button" onClick={() => setSelectedMovie(item)} className={`text-left ${focusClass}`}>{titleOf(item)}</button>
                               </h3>
-                              <p className="mt-1 text-xs text-[var(--ink-muted)]">
-                                {item.media_type === "tv" ? "Series" : "Movie"}{" "}
-                                ·{" "}
+                              {(item.release_date || item.first_air_date) && <p className="mt-1 text-xs text-[var(--ink-muted)]">
                                 {(
                                   item.release_date ||
                                   item.first_air_date ||
                                   ""
-                                ).slice(0, 4) || "Date TBA"}
-                              </p>
-                              <p className="mt-2 line-clamp-2 text-xs leading-5 text-[var(--ink-muted)]">
-                                {reasonOf(item)}
-                              </p>
-                            </button>
+                                ).slice(0, 4)}
+                              </p>}
+                              <PosterActions id={item.id} type={item.media_type === "tv" ? "tv" : "movie"} title={titleOf(item)} rating={item.vote_average} posterUrl={posterOf(item)} />
+                            </article>
                           ))}
                         </div>
                       </div>

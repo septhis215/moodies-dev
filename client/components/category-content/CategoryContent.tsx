@@ -20,6 +20,7 @@ import {
 import { tmdbImage } from "@/lib/tmdb";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { PosterSaveButton } from "@/components/ui/PosterSaveButton";
+import { PosterActions } from "@/components/ui/PosterActions";
 import RatingBadge from "../ui/rating-badge";
 
 interface MediaItem {
@@ -368,35 +369,31 @@ export function CategoryContent({
                       key={`${item.type}:${item.id}`}
                       className="group min-w-0"
                     >
-                      <div className="relative">
+                      <div className="ui-media-artwork ui-poster">
                         <Link
                           href={getDetailUrl(item)}
-                          className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--surface-0)]"
+                          className="block h-full rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--surface-0)]"
                         >
-                          <div className="ui-media-artwork ui-poster">
-                            <img
-                              src={getPosterUrl(item)}
-                              alt={getTitle(item)}
-                              loading="lazy"
-                              onError={() => markImageError(item, "poster")}
-                              className="h-full w-full object-cover transition-[filter] duration-300 ease-out group-hover:brightness-110 group-hover:saturate-[1.05] motion-reduce:transition-none"
-                            />
-                            <RatingBadge rating={item.vote_average} placement="poster" />
-                            <div
-                              aria-hidden="true"
-                              className="pointer-events-none absolute inset-x-0 bottom-0 hidden bg-gradient-to-t from-black/80 to-transparent px-3 pb-3 pt-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 motion-reduce:transition-none sm:block"
-                            >
-                              <span className="flex items-center justify-end gap-1 text-xs font-bold text-white/88">
-                                View details
-                                <ArrowUpRight
-                                  className="h-4 w-4"
-                                  aria-hidden="true"
-                                />
-                              </span>
-                            </div>
+                          <img
+                            src={getPosterUrl(item)}
+                            alt={getTitle(item)}
+                            loading="lazy"
+                            onError={() => markImageError(item, "poster")}
+                            className="h-full w-full object-cover transition-[filter] duration-300 ease-out group-hover:brightness-110 group-hover:saturate-[1.05] motion-reduce:transition-none"
+                          />
+                          <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-x-0 bottom-0 hidden bg-gradient-to-t from-black/80 to-transparent px-3 pb-3 pt-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 motion-reduce:transition-none sm:block"
+                          >
+                            <span className="flex items-center justify-end gap-1 text-xs font-bold text-white/88">
+                              View details
+                              <ArrowUpRight
+                                className="h-4 w-4"
+                                aria-hidden="true"
+                              />
+                            </span>
                           </div>
                         </Link>
-                        {renderBookmark(item)}
                       </div>
 
                       <Link
@@ -420,6 +417,15 @@ export function CategoryContent({
                           </p>
                         ) : null}
                       </Link>
+                      <PosterActions rating={item.vote_average}
+                        id={item.id}
+                        type={item.type}
+                        title={getTitle(item)}
+                        posterUrl={getPosterUrl(item)}
+                        saved={isSaved(item)}
+                        saving={loadingIds.has(getItemKey(item))}
+                        onToggleSave={() => toggleSaved(item)}
+                      />
                     </article>
                   ))}
                 </div>

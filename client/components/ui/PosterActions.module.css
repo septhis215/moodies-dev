@@ -1,0 +1,70 @@
+.actions { margin-top: 0.25rem; min-width: 0; container-type: inline-size; }
+.row { display: flex; align-items: center; flex-wrap: wrap; min-width: 0; gap: 4px; }
+.rating { display: inline-flex; align-items: center; gap: 2px; margin-right: auto; color: var(--ink-muted); font-size: 0.75rem; font-weight: 500; line-height: 1.5; }
+.rating svg { width: 12px; height: 12px; color: var(--brand-gold); }
+.controls { display: flex; flex-shrink: 0; margin-left: auto; gap: 0; }
+.action {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+}
+.action svg { width: 20px; height: 20px; flex-shrink: 0; stroke-width: 2; }
+.save { width: 44px; flex-shrink: 0; }
+.save svg { width: 18px; height: 18px; }
+.more { width: 44px; flex-shrink: 0; }
+.close { width: 48px; min-height: 48px; flex-shrink: 0; }
+.action[data-action="save"][data-active="true"] { color: var(--brand-gold); }
+.action[data-action="watched"][data-active="true"] { color: var(--color-emerald-400); }
+.action[data-action="like"][data-active="true"] { color: var(--brand-coral-strong); }
+.action[data-action="save"][data-active="true"] svg,
+.action[data-action="watched"][data-active="true"] svg:not(.activeCheck) { stroke: var(--surface-0); }
+.action[data-action="watched"][data-active="true"] svg circle { stroke: currentColor; }
+.action:focus-visible { outline: 2px solid var(--brand-coral-strong); outline-offset: 2px; }
+.action:disabled { cursor: default; }
+.action:disabled:not([aria-busy="true"]) { opacity: 0.55; }
+.action:hover, .action:focus-visible { background: var(--surface-2); color: var(--ink); }
+.dialog {
+  position: fixed;
+  inset: auto 0 0;
+  width: 100%;
+  max-width: none;
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  margin: 0;
+  padding: 1rem 1rem max(1rem, env(safe-area-inset-bottom));
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: var(--surface-1);
+  color: var(--ink);
+}
+.dialog::backdrop { background: rgb(0 0 0 / 65%); }
+.dialogHeader { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.dialogHeader h3 { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 1rem; font-weight: 600; line-height: 1.5; }
+.close { background: transparent; border-color: transparent; }
+.dialogRows { display: flex; flex-direction: column; gap: 8px; }
+.dialogAction { width: 100%; min-height: 52px; justify-content: flex-start; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); font-size: 0.875rem; text-align: left; }
+.dialogAction span { flex: 1; }
+.activeCheck { margin-left: auto; }
+@container (max-width: 119px) {
+  .rating { flex-basis: 100%; }
+}
+@media (min-width: 640px) {
+  .dialog { inset: 0; width: min(24rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); height: fit-content; margin: auto; border-radius: var(--radius-md); padding: 1.25rem; }
+}
+@media (prefers-reduced-motion: no-preference) { .spinner { animation: spin 0.8s linear infinite; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (forced-colors: active) {
+  .action, .dialog { border: 1px solid ButtonText; }
+  .action[aria-pressed="true"] { outline: 2px solid Highlight; }
+}

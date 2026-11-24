@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BookmarkCheck, Heart, Trash2 } from "lucide-react";
 import { TmdbImage } from "@/components/ui/TmdbImage";
 import { RatingBadge } from "@/components/ui/rating-badge";
+import { PosterActions } from "@/components/ui/PosterActions";
 import { tmdbImage } from "@/lib/tmdb";
 import {
   entryDate,
@@ -39,11 +40,10 @@ export function LibraryCard({
       className={`ui-panel ${styles.card} ${view === "posters" ? styles.posterCard : ""}`}
       aria-label={title}
     >
-      <Link
-        href={href}
+      <div
         className={`${styles.poster} ${view === "posters" ? "ui-media-artwork ui-poster" : ""}`}
-        aria-label={"Explore " + title}
       >
+        <Link href={href} className="absolute inset-0" aria-label={"Explore " + title}>
         <TmdbImage
           src={
             tmdbImage(entry.summary?.poster_path, "w342") ||
@@ -57,13 +57,12 @@ export function LibraryCard({
               : "(max-width: 767px) 30vw, (max-width: 1279px) 16vw, 140px"
           }
         />
-        {view === "posters" && <RatingBadge rating={entry.summary?.vote_average} placement="poster" />}
-      </Link>
+        </Link>
+      </div>
       <div className={styles.copy}>
         <div className={styles.meta}>
           <span>
-            {entry.kind === "movie" ? "Movie" : "Series"}
-            {date ? " · " + date.slice(0, 4) : ""}
+            {view === "cards" ? `${entry.kind === "movie" ? "Movie" : "Series"}${date ? " · " + date.slice(0, 4) : ""}` : date.slice(0, 4)}
           </span>
           {view === "cards" && (
             <RatingBadge rating={entry.summary?.vote_average} variant="minimal" />
@@ -79,7 +78,7 @@ export function LibraryCard({
               entry.summary.genres?.slice(0, 2).join(" · ") ||
               "Explore this title to find out more."}
         </p>
-        <div className={styles.footer}>
+        {view === "cards" && <div className={styles.footer}>
           <span className={styles.status}>
             <StatusIcon
               size={14}
@@ -88,7 +87,7 @@ export function LibraryCard({
             />
             {kind === "watchlist" ? "On your list" : "Liked by you"}
           </span>
-          <button
+          {view === "cards" && <button
             type="button"
             disabled={busy}
             onClick={onRemove}
@@ -99,12 +98,24 @@ export function LibraryCard({
           >
             <Trash2 size={16} aria-hidden="true" />
             <span className="sr-only">{busy ? "Removing…" : removeLabel}</span>
-          </button>
-        </div>
+          </button>}
+        </div>}
         {view === "posters" && !entry.summary && (
           <p className="mt-1 text-xs text-[var(--ink-muted)]">
             Details unavailable
           </p>
+        )}
+        {view === "posters" && (
+          <PosterActions
+            id={entry.id}
+            type={entry.kind}
+            title={title}
+            rating={entry.summary?.vote_average}
+            posterUrl={tmdbImage(entry.summary?.poster_path, "w154")}
+            {...(kind === "watchlist"
+              ? { saved: true, saving: busy, onToggleSave: onRemove }
+              : { liked: true, liking: busy, onToggleLike: onRemove })}
+          />
         )}
       </div>
     </article>

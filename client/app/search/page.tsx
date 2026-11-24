@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Grid3X3, List, Search, SlidersHorizontal, X } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { RatingBadge } from "@/components/ui/rating-badge";
+import { PosterActions } from "@/components/ui/PosterActions";
 import Pagination from "@/components/ui/pagination";
 import { tmdbImage } from "@/lib/tmdb";
 import {
@@ -626,13 +627,12 @@ export default function SearchResultsPage() {
                   .slice(0, 3)
                   .join(", ");
                 return (
-                  <Link
+                  <article
                     key={`${item.type}-${item.id}`}
-                    href={hrefFor(item)}
                     className={styles.card}
-                    aria-label={`View ${item.type === "person" ? "profile" : "details"} for ${title}`}
                   >
                     <div className={`ui-media-artwork ui-poster ${styles.poster}`}>
+                      <Link href={hrefFor(item)} className="absolute inset-0" aria-label={`View ${item.type === "person" ? "profile" : "details"} for ${title}`}>
                       <Image
                         src={image}
                         alt=""
@@ -643,18 +643,16 @@ export default function SearchResultsPage() {
                             : "(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 20vw"
                         }
                       />
-                      {view === "grid" && hasRating && (
-                        <RatingBadge rating={rating} placement="poster" />
-                      )}
+                      </Link>
                     </div>
-                    <div className={styles.cardBody}>
+                    <Link href={hrefFor(item)} className={styles.cardBody}>
                       <h3>{title}</h3>
                       <div className={styles.cardFacts}>
-                        <p className={styles.meta}>
+                        {(view === "list" || year || item.type === "person") && <p className={styles.meta}>
                           {item.type === "person"
                             ? `Person${item.known_for_department ? ` · ${item.known_for_department}` : ""}`
-                            : `${item.type === "movie" ? "Movie" : "Series"} · ${year || "Date TBA"}`}
-                        </p>
+                            : view === "list" ? `${item.type === "movie" ? "Movie" : "Series"} · ${year || "Date TBA"}` : year}
+                        </p>}
                         {view === "list" && hasRating && (
                           <RatingBadge rating={rating} variant="minimal" />
                         )}
@@ -674,8 +672,11 @@ export default function SearchResultsPage() {
                           <ArrowRight size={14} aria-hidden="true" />
                         </span>
                       )}
-                    </div>
-                  </Link>
+                    </Link>
+                    {view === "grid" && item.type !== "person" && (
+                      <PosterActions id={item.id} type={item.type} title={title} rating={hasRating ? rating : null} posterUrl={image} />
+                    )}
+                  </article>
                 );
               })}
             </div>

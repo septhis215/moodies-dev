@@ -168,6 +168,20 @@ export class AchievementsService {
     });
   }
 
+  async watchedTitles(userId: string) {
+    if (!this.enabled) return { enabled: false, titles: [] };
+    const rows = await this.prisma.watchedTitle.findMany({
+      where: { userId },
+      select: { tmdbId: true, mediaType: true },
+    });
+    return {
+      enabled: true,
+      titles: rows.map((row) => ({
+        tmdbId: row.tmdbId,
+        type: row.mediaType === MediaType.MOVIE ? 'movie' : 'tv',
+      })),
+    };
+  }
   async watched(userId: string, type: 'movie' | 'tv', id: number) {
     if (!this.enabled) return { enabled: false, watched: false };
     const row = await this.prisma.watchedTitle.findUnique({
