@@ -25,9 +25,7 @@ coverage/
 # Local browser runs, screenshots, and agent scratch files
 .playwright-cli/
 .qoder-scratch/
-/output/playwright/
-/output/achievements/
-/output/toast-preview/
+/output/
 /client/output/
 
 # Logs
