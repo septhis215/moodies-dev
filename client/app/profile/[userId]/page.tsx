@@ -953,10 +953,12 @@ function PublicListCard({ item }: { item: PublicListItem }) {
         </span>
         </Link>
       </div>
-      <p className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] group-hover:text-[var(--brand-coral-strong)]">
+      <div className="ui-poster-caption">
+      <p className="ui-poster-title" title={item.title}>
         <Link href={href}>{item.title}</Link>
       </p>
-      {item.year && <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{item.year}</p>}
+      {item.year && <p className="ui-poster-meta">{item.year}</p>}
+      </div>
       <PosterActions id={item.id} type={item.mediaType === "TV" ? "tv" : "movie"} title={item.title} releaseDate={item.releaseDate} status={item.status} posterUrl={poster} />
     </article>
   );

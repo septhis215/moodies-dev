@@ -630,6 +630,7 @@ export default function SearchResultsPage() {
                 return (
                   <article
                     key={`${item.type}-${item.id}`}
+                    data-media={item.type}
                     className={styles.card}
                   >
                     <div className={`ui-media-artwork ui-poster ${styles.poster}`}>
@@ -647,7 +648,7 @@ export default function SearchResultsPage() {
                       </Link>
                     </div>
                     <Link href={hrefFor(item)} className={styles.cardBody}>
-                      <h3>{title}</h3>
+                      <h3 title={title}>{title}</h3>
                       <div className={styles.cardFacts}>
                         {(view === "list" || year || item.type === "person") && <p className={styles.meta}>
                           {item.type === "person"

@@ -217,17 +217,16 @@ function CreditCard({
           />
         </Link>
       </div>
-      <h3 className="mt-3 min-h-10 line-clamp-2 break-words text-sm font-semibold leading-5 text-[var(--ink)]">
-        <Link
-          href={getHref(credit)}
-          className="hover:text-[var(--brand-coral-strong)]"
-        >
-          {getTitle(credit)}
-        </Link>
-      </h3>
-      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-[var(--ink-muted)]">
-        <span>{getYear(credit)}</span>
-        <span>{credit.media_type === "tv" ? "Series" : "Movie"}</span>
+      <div className="ui-poster-caption">
+        <h3 className="ui-poster-title" title={getTitle(credit)}>
+          <Link
+            href={getHref(credit)}
+            className="hover:text-[var(--brand-coral-strong)]"
+          >
+            {getTitle(credit)}
+          </Link>
+        </h3>
+        {getDate(credit) && <p className="ui-poster-meta">{getYear(credit)}</p>}
       </div>
       {credit.character && (
         <p className="mt-1 line-clamp-1 text-xs leading-5 text-[var(--ink-muted)]">

@@ -60,17 +60,20 @@ export function LibraryCard({
         </Link>
       </div>
       <div className={styles.copy}>
-        <div className={styles.meta}>
+        {view === "cards" && <div className={styles.meta}>
           <span>
             {view === "cards" ? `${entry.kind === "movie" ? "Movie" : "Series"}${date ? " · " + date.slice(0, 4) : ""}` : date.slice(0, 4)}
           </span>
           {view === "cards" && (
             <RatingBadge rating={entry.summary?.vote_average} variant="minimal" />
           )}
-        </div>
-        <h3 className={styles.title}>
+        </div>}
+        <div className={view === "posters" ? "ui-poster-caption" : undefined}>
+        <h3 className={view === "posters" ? "ui-poster-title" : styles.title} title={title}>
           <Link href={href}>{title}</Link>
         </h3>
+        {view === "posters" && date && <p className="ui-poster-meta">{date.slice(0, 4)}</p>}
+        </div>
         <p className={styles.overview}>
           {!entry.summary
             ? "Details unavailable"

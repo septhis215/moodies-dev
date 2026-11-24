@@ -736,16 +736,18 @@ export default function MovieQuizPage() {
                                 />
                                 </button>
                               </div>
-                              <h3 className="ui-text-reveal mt-2 min-h-10 line-clamp-2 break-words text-sm font-semibold leading-5">
-                                <button type="button" onClick={() => setSelectedMovie(item)} className={`text-left ${focusClass}`}>{titleOf(item)}</button>
+                              <div className="ui-poster-caption">
+                              <h3 className="ui-poster-title" title={titleOf(item)}>
+                                <button type="button" onClick={() => setSelectedMovie(item)} className={`block w-full truncate text-left ${focusClass}`}>{titleOf(item)}</button>
                               </h3>
-                              {(item.release_date || item.first_air_date) && <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                              {(item.release_date || item.first_air_date) && <p className="ui-poster-meta">
                                 {(
                                   item.release_date ||
                                   item.first_air_date ||
                                   ""
                                 ).slice(0, 4)}
                               </p>}
+                              </div>
                               <PosterActions id={item.id} type={item.media_type === "tv" ? "tv" : "movie"} title={titleOf(item)} rating={item.vote_average} releaseDate={item.media_type === "tv" ? item.first_air_date || item.release_date : item.release_date} status={item.status} posterUrl={posterOf(item)} />
                             </article>
                           ))}

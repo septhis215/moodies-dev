@@ -158,10 +158,6 @@ function getMediaHref(rec: Recommendation) {
   return rec.mediaType === "TV" ? `/tv/${rec.tmdbId}` : `/movies/${rec.tmdbId}`;
 }
 
-function getMediaLabel(rec: Recommendation) {
-  return rec.mediaType === "TV" ? "Series" : "Movie";
-}
-
 function getYear(date?: string | null) {
   if (!date) return "New";
   const year = new Date(date).getFullYear();
@@ -596,13 +592,13 @@ export default function MoodRecommendationsSection({
                         </div>
                       </div>
 
-                      <Link href={getMediaHref(rec)} className="flex flex-1 flex-col p-2.5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral)]">
-                        <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
-                          {rec.title}
-                        </h3>
-                        <p className="mt-1 text-xs text-[var(--ink-muted)]">
-                          {getMediaLabel(rec)} · {getYear(rec.releaseDate)}
-                        </p>
+                      <Link href={getMediaHref(rec)} className="block px-2.5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral)]">
+                        <div className="ui-poster-caption">
+                          <h3 className="ui-poster-title" title={rec.title}>
+                            {rec.title}
+                          </h3>
+                          {rec.releaseDate && <p className="ui-poster-meta">{getYear(rec.releaseDate)}</p>}
+                        </div>
                         {genres.length > 0 && (
                           <p className="mt-1 hidden truncate text-xs text-[var(--ink-muted)] sm:block">
                             {genres.slice(0, 2).join(" · ")}

@@ -112,10 +112,14 @@ inside a `group` `Link`.
 
 **Card title + meta**
 
+Poster titles occupy one truncated line. Put the known release year on a separate
+line immediately below the title; do not reserve a second title line.
+
 ```tsx
-<h3 className="mt-2.5 line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)]
-               transition-colors group-hover:text-[var(--brand-coral-strong)]">{title}</h3>
-<p className="mt-0.5 text-xs text-[var(--ink-muted)]">{year || "Date TBA"}</p>
+<div className="ui-poster-caption">
+  <h3 title={title} className="ui-poster-title">{title}</h3>
+  {year && <p className="ui-poster-meta">{year}</p>}
+</div>
 ```
 
 **CTA** — prefer the classes; use the same values inline only inside the hero:
@@ -188,7 +192,7 @@ Typography only looks consistent when the surrounding rhythm is consistent too.
 | Heading → lead | `mt-2` (`h2 text-3xl/4xl`) or `mt-3` (`h2 text-2xl` teaser blocks) |
 | Kicker → heading | `mt-2` (or `mb-1` when kicker sits above a small title) |
 | Copy measure | headings `max-w-3xl`; leads `max-w-2xl`; hero overview `max-w-xl`→`max-w-2xl` |
-| Truncation | `line-clamp-2` for card titles, `line-clamp-3` for overviews, `line-clamp-1` for meta rows |
+| Truncation | Poster card titles use single-line ellipsis (`ui-poster-title`, 20px line); retain full text and a `title` attribute. Use `line-clamp-3` for overviews and `line-clamp-1` for meta rows. |
 | Heading alignment | `leading-none` for `h2` section titles, `text-balance` for the hero `h1` |
 
 ---

@@ -65,8 +65,8 @@ export function MediaCard({
           />
         </IntentPrefetchLink>
       </div>
-      <IntentPrefetchLink href={href} tabIndex={-1} className="ui-card-link block">
-        <h3 className="ui-poster-title">{title}</h3>
+      <IntentPrefetchLink href={href} tabIndex={-1} className="ui-card-link ui-poster-caption">
+        <h3 className="ui-poster-title" title={title}>{title}</h3>
         {year && <p className="ui-poster-meta">{year}</p>}
       </IntentPrefetchLink>
       {item.reason ? (

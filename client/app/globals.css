@@ -402,14 +402,12 @@ body {
   }
 
   .ui-poster-title {
-    display: -webkit-box;
+    display: block;
     overflow: hidden;
-    overflow-wrap: anywhere;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    /* Reserve both lines so one long title cannot push its card footer out of line. */
-    min-height: 2.5rem;
-    margin-top: 0.625rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-height: 1.25rem;
+    margin-top: 0.5rem;
     color: var(--ink);
     font-size: 0.875rem;
     font-weight: 600;
@@ -426,6 +424,15 @@ body {
     font-size: 0.75rem;
     line-height: 1rem;
   }
+
+  .ui-poster-caption {
+    display: block;
+    min-width: 0;
+    margin-top: 0.5rem;
+  }
+
+  .ui-poster-caption .ui-poster-title { flex: 1; min-width: 0; margin-top: 0; }
+  .ui-poster-caption .ui-poster-meta { margin-top: 0.125rem; }
 
   .ui-card-link {
     border-radius: var(--radius-md);

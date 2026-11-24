@@ -299,17 +299,15 @@ function FootballCard({ item, index }: { item: FootballStory; index: number }) {
           )}
         </div>
       </div>
-      <Link href={href} className="block rounded-lg pt-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] sm:pt-3">
+      <Link href={href} className="block rounded-lg pt-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)]">
         <div className="mb-1.5 inline-flex max-w-full rounded bg-emerald-300/15 px-2 py-0.5 text-[9px] font-bold text-emerald-100 ring-1 ring-emerald-200/20 sm:py-1 sm:text-[10px]">
           <span className="truncate">{relevance}</span>
         </div>
-        <h3 className="line-clamp-2 text-xs font-black leading-tight text-white sm:text-sm">
-          {title}
-        </h3>
-        <div className="mt-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-zinc-300 sm:mt-2 sm:gap-2 sm:text-[11px]">
-          {year ? (
-            <span className="inline-flex items-center gap-1">{year}</span>
-          ) : null}
+        <div className="ui-poster-caption mt-0">
+          <h3 className="ui-poster-title" title={title}>
+            {title}
+          </h3>
+          {year && <p className="ui-poster-meta">{year}</p>}
         </div>
       </Link>
       <PosterActions rating={item.vote_average} id={item.id} type={mediaType} title={title} posterUrl={posterUrl(item.poster_path)} releaseDate={mediaType === "tv" ? item.first_air_date || item.release_date : item.release_date} status={item.status} />

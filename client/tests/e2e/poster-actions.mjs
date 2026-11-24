@@ -33,7 +33,7 @@ const result = await build({
   stdin: { resolveDir: root, loader: "tsx", contents: `import React from 'react';import{createRoot}from'react-dom/client';import{MediaCard}from'./client/components/ui/MediaCard';import{AppToaster}from'./client/components/providers/AppToaster';import{appToast}from'./client/lib/toast';window.clearToasts=()=>appToast.dismiss();
     const root=createRoot(document.getElementById('root'));
     window.releaseFixture=(item)=>root.render(<><MediaCard item={item}/><AppToaster/></>);
-    root.render(<><div className='fixture-grid'>{[0,1].map(i=><MediaCard key={i} item={{id:42,title:'A title that wraps onto another line',poster_path:i?null:'/poster.jpg',release_date:'2000-01-01',vote_average:i?0:8.1}}/>)}</div><AppToaster/></>);` },
+    root.render(<><div className='fixture-grid'>{[0,1].map(i=><MediaCard key={i} item={{id:42,title:i?'Short':'A title that wraps onto another line',poster_path:i?null:'/poster.jpg',release_date:'2000-01-01',vote_average:i?0:8.1}}/>)}</div><AppToaster/></>);` },
   bundle: true, write: false, outfile: "fixture.js", jsx: "automatic",
   alias: { "@": resolve(root, "client") }, define: { "process.env.NODE_ENV": '"test"', "process.env.NEXT_PUBLIC_TMDB_IMAGE_BASE": '""', "process.env": "{}" },
   plugins: [{ name: "account-fixture", setup(builder) {
@@ -95,7 +95,16 @@ try {
     assert.equal(await upcomingModal.locator('[data-action="watched"]').count(), 1, "Released unrated titles can be marked watched");
     await page.keyboard.press('Escape');
     await upcomingModal.waitFor({ state: 'hidden' });
-    assert.equal(await metadata.height, 40, "Two title lines stay reserved so card footers line up");
+    assert.equal(metadata.height, 20, "Title occupies one compact line");
+    const fullTitle = first.locator('.ui-poster-title');
+    assert.equal(await fullTitle.textContent(), 'A title that wraps onto another line', "Full title remains in accessible DOM text");
+    assert.equal(await fullTitle.getAttribute('title'), 'A title that wraps onto another line', "Full title remains available on hover");
+    assert.ok(await fullTitle.evaluate(element => element.scrollWidth > element.clientWidth && getComputedStyle(element).textOverflow === 'ellipsis' && getComputedStyle(element).whiteSpace === 'nowrap'), "Long title is visibly truncated with an ellipsis");
+    const shortTitle = await upcoming.locator('.ui-poster-title').boundingBox();
+    assert.equal(shortTitle.height, metadata.height, "Short and long titles share one-line height");
+    assert.equal((await upcoming.locator('[data-action="save"]').boundingBox()).y, row.y, "Short and long title footers align");
+    const year = await first.locator('.ui-poster-meta').boundingBox();
+    assert.ok(Math.abs(year.x - metadata.x) <= 1 && year.y >= metadata.y + metadata.height + 1, "Known year sits below the single-line title");
     assert.equal(await save.innerText(), '', "Save stays icon only");
     assert.equal(await more.innerText(), '', "More stays icon only");
     assert.equal(await save.evaluate(element => getComputedStyle(element).backgroundColor), 'rgba(0, 0, 0, 0)', "Actions have no permanent fill");

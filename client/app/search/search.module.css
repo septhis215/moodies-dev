@@ -285,6 +285,19 @@
 .card:hover h3 {
   color: var(--brand-coral-strong);
 }
+.grid .card:not([data-media="person"]) .cardBody {
+  display: flex;
+  flex-direction: column;
+  flex: 0;
+  padding-top: 0.5rem;
+}
+.grid .card:not([data-media="person"]) h3 {
+  display: block;
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.grid .card:not([data-media="person"]) .cardFacts { margin-top: 0.125rem; }
 .meta {
   color: var(--ink-muted);
   font-size: 0.75rem;

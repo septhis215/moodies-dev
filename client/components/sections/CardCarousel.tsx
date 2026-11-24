@@ -356,13 +356,11 @@ export default function CardCarousel<T extends MediaItem>({
                       </div>
                     </div>
                   </div>
-                  <IntentPrefetchLink href={href} className="ui-card-link block">
-                    <h3 className="ui-poster-title">
+                  <IntentPrefetchLink href={href} className="ui-card-link ui-poster-caption">
+                    <h3 className="ui-poster-title" title={titleText}>
                       {titleText}
                     </h3>
-                    <p className="ui-poster-meta">
-                      {type === "tv" ? "Series" : "Movie"} · {itemYear(item) || "Date TBA"}
-                    </p>
+                    {itemYear(item) && <p className="ui-poster-meta">{itemYear(item)}</p>}
                   </IntentPrefetchLink>
                   <PosterActions rating={rating}
                     releaseDate={type === "tv" ? item.first_air_date || item.release_date : item.release_date}

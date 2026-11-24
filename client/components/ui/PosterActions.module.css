@@ -1,4 +1,4 @@
-.actions { margin-top: 0.25rem; min-width: 0; container-type: inline-size; }
+.actions { min-width: 0; container-type: inline-size; }
 .row { display: flex; align-items: center; flex-wrap: wrap; min-width: 0; gap: 4px; }
 .rating { display: inline-flex; align-items: center; gap: 4px; margin-right: auto; color: var(--ink-muted); font-size: 0.75rem; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
 /* 10px keeps the star's ink the same height as the 12px numerals' cap height. */

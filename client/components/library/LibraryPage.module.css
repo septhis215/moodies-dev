@@ -252,14 +252,12 @@
   width: 100%;
 }
 .posterCard .copy {
-  padding: 0.875rem;
+  padding: 0.5rem;
 }
 .posterCard .overview {
   display: none;
 }
-.posterCard .title {
-  min-height: 2.625rem;
-}
+.posterCard .copy :global(.ui-poster-caption) { margin-top: 0; }
 .posterCard .status {
   font-size: 0.6875rem;
 }
@@ -326,10 +324,10 @@
   .posterCard {
     min-height: 0;
   }
-  .copy,
-  .posterCard .copy {
+  .copy {
     padding: 0.75rem;
   }
+  .posterCard .copy { padding: 0.5rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .card,

@@ -295,15 +295,15 @@ export function CategoryContent({
                         {renderBookmark(item)}
                         <Link
                           href={getDetailUrl(item)}
-                          className="grid min-h-32 grid-cols-[7.5rem_minmax(0,1fr)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)] sm:min-h-44 sm:grid-cols-1 sm:grid-rows-[minmax(7rem,1fr)_auto] lg:min-h-0 lg:grid-cols-[9rem_minmax(0,1fr)] lg:grid-rows-1"
+                          className="grid grid-cols-[6rem_minmax(0,1fr)] items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)] sm:grid-cols-[5.5rem_minmax(0,1fr)] lg:grid-cols-[7rem_minmax(0,1fr)]"
                           aria-label={`${index + 2}. ${getTitle(item)}, ${mediaLabel(item)}`}
                         >
-                          <div className="relative min-h-full overflow-hidden">
+                          <div className="relative aspect-[2/3] w-full overflow-hidden bg-[var(--surface-2)]">
                             <img
-                              src={getBackdropUrl(item)}
+                              src={getPosterUrl(item)}
                               alt=""
-                              onError={() => markImageError(item, "backdrop")}
-                              className="absolute inset-0 h-full w-full object-cover transition-[filter] duration-300 ease-out group-hover:brightness-110 group-hover:saturate-[1.06] motion-reduce:transition-none"
+                              onError={() => markImageError(item, "poster")}
+                              className="absolute inset-0 h-full w-full object-contain transition-[filter] duration-300 ease-out group-hover:brightness-110 group-hover:saturate-[1.06] motion-reduce:transition-none"
                             />
                             <div className="absolute inset-0 bg-black/15" />
                             <span className="absolute bottom-2 left-2 border-l-2 border-[var(--brand-coral)] bg-black/80 px-2 py-1 text-xs font-bold tabular-nums text-white">
@@ -401,17 +401,13 @@ export function CategoryContent({
                         href={getDetailUrl(item)}
                         className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--surface-0)]"
                       >
-                        <h3 className="ui-poster-title">
-                          {getTitle(item)}
-                        </h3>
-                        <p className="ui-poster-meta">
-                          {mediaLabel(item)} · {getReleaseYear(item)}
-                          {item.number_of_seasons ? (
-                            <>
-                               · {item.number_of_seasons} season{item.number_of_seasons === 1 ? "" : "s"}
-                            </>
-                          ) : null}
-                        </p>
+                        <div className="ui-poster-caption">
+                          <h3 className="ui-poster-title" title={getTitle(item)}>
+                            {getTitle(item)}
+                          </h3>
+                          {(item.release_date || item.first_air_date) && <p className="ui-poster-meta">{getReleaseYear(item)}</p>}
+                        </div>
+                        {item.number_of_seasons ? <p className="ui-poster-meta">{item.number_of_seasons} season{item.number_of_seasons === 1 ? "" : "s"}</p> : null}
                         {item.genres?.length ? (
                           <p className="mt-1 line-clamp-1 text-xs text-[var(--ink-muted)]">
                             {item.genres.slice(0, 2).join(" · ")}
