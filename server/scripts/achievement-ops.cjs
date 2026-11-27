@@ -9,10 +9,10 @@ require('tsconfig-paths').register({
 const { PrismaClient } = require('@prisma/client');
 const {
   AchievementCatalogService,
-} = require('../dist/achievements/achievement-catalog.service');
+} = require('../dist/modules/achievements/achievement-catalog.service');
 const {
   AchievementOperationsService,
-} = require('../dist/achievements/achievement-operations.service');
+} = require('../dist/modules/achievements/achievement-operations.service');
 const command = process.argv[2];
 const args = {};
 for (let i = 3; i < process.argv.length; i += 2) {

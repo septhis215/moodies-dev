@@ -1,0 +1,32 @@
+name: moodies-staging-redis
+
+services:
+  redis-tunnel:
+    build: .
+    image: moodies-redis-tunnel:local
+    restart: unless-stopped
+    environment:
+      SSH_HOST: ${SSH_HOST:?Set SSH_HOST in .env}
+      SSH_USER: ${SSH_USER:-root}
+      SSH_PORT: ${SSH_PORT:-22}
+    ports:
+      - "127.0.0.1:16379:16379"
+    volumes:
+      - type: bind
+        source: ./.ssh/id_ed25519
+        target: /credentials/id_ed25519
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.ssh/known_hosts
+        target: /credentials/known_hosts
+        read_only: true
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:mode=0700
+    security_opt:
+      - no-new-privileges:true
+

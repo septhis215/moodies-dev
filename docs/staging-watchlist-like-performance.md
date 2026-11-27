@@ -18,8 +18,8 @@ This pass removed the unused count queries and added CORS preflight caching.
 | Area | Evidence | Impact |
 |---|---|---|
 | Frontend optimistic update | `client/hooks/useWatchlist.ts` updates local sets before `toggleWatchlist`; `client/hooks/useLiked.ts` does the same before `toggleLiked` | Perceived UI can be instant if controls are wired to the hook state |
-| Watchlist mutation overhead | `server/src/watchlist/watchlist.service.ts` previously ran two `count()` queries after each toggle | Removed; response is now `{ removed }` |
-| Liked mutation overhead | `server/src/liked/liked.service.ts` previously ran two `count()` queries after each toggle | Removed; response is now `{ liked }` |
+| Watchlist mutation overhead | `server/src/modules/watchlist/watchlist.service.ts` previously ran two `count()` queries after each toggle | Removed; response is now `{ removed }` |
+| Liked mutation overhead | `server/src/modules/liked/liked.service.ts` previously ran two `count()` queries after each toggle | Removed; response is now `{ liked }` |
 | Indexes | `server/prisma/schema.prisma` has `@@unique([userId, tmdbId, mediaType])` and `@@index([userId, addedAt])` for both watchlist and liked tables | Direct membership lookup is indexed |
 | CORS | `server/src/main.ts` uses credentialed CORS and cross-origin JSON mutations will preflight on staging | Added `maxAge: 600` to cache successful preflight checks |
 | External APIs | Watchlist/liked toggle services do not call TMDB or Redis | Slow action is not caused by TMDB in the toggle path |
@@ -131,7 +131,7 @@ Authenticated staging timing still needs a browser/network capture because this 
 - Problem: Extra aggregate counts add transaction time and DB load.
 - Evidence: Removed four count queries across the two toggle endpoints.
 - Recommended change: Keep response payloads small: `{ removed }`, `{ liked }`.
-- Files affected: `server/src/watchlist/watchlist.service.ts`, `server/src/liked/liked.service.ts`.
+- Files affected: `server/src/modules/watchlist/watchlist.service.ts`, `server/src/modules/liked/liked.service.ts`.
 - Risk: Low; current shared clients only type/read these booleans.
 - Expected improvement: Lower mutation TTFB, especially with larger staging tables.
 

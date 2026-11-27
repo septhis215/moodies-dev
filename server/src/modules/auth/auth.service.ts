@@ -1,0 +1,600 @@
+import {
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException,
+  BadRequestException,
+  UnauthorizedException,
+  Logger,
+  Optional,
+} from '@nestjs/common';
+import {
+  ChangePasswordDto,
+  LoginDto,
+  RegisterDto,
+  UpdateProfileDto,
+} from 'src/modules/auth/dto';
+import { PrismaService } from 'src/prisma/prisma.service';
+import * as argon from 'argon2';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { v4 as uuid } from 'uuid';
+import { randomInt } from 'node:crypto';
+import { RedisService } from 'src/redis/redis.service';
+import { sendVerificationCode } from '../../utils/mailer';
+import { uploadAvatarToStorage } from '../../utils/storage';
+import { accessTtlMs } from './auth.config';
+import { AuthSessionService, type AccessIdentity } from './auth-session.service';
+import { MediaType } from '@prisma/client';
+import { AchievementsService } from '../achievements/achievements.service';
+
+
+
+@Injectable({})
+export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
+  constructor(
+    private prismaService: PrismaService,
+    private readonly jwt: JwtService,
+    private configService: ConfigService,
+    private readonly redis: RedisService,
+    private readonly sessions: AuthSessionService,
+    @Optional() private readonly achievements?: AchievementsService,
+  ) { }
+
+  /** Short-lived access token delivered as an HttpOnly cookie. */
+  signAccessToken(payload: { sub: number | string; email?: string; sid?: string; ver?: number }) {
+    return this.jwt.sign(
+      { ...payload, sub: String(payload.sub) },
+      { secret: process.env.JWT_SECRET, expiresIn: accessTtlMs() / 1000 },
+    );
+  }
+
+  /** Issue a fresh access + refresh pair for a freshly authenticated user. */
+  async issueTokens(userId: string, email?: string) {
+    const { session, refreshToken } = await this.sessions.create(userId);
+    const accessToken = this.signAccessToken({ sub: userId, email, sid: session.id, ver: session.user.authVersion });
+    return { accessToken, refreshToken, expiresAt: session.expiresAt };
+  }
+
+  /**
+   * Rotate through the durable session store, including bounded duplicate
+   * recovery. Store outages propagate; only invalid sessions return null.
+   */
+  async rotateRefreshToken(oldToken: string) {
+    const rotated = await this.sessions.rotate(oldToken);
+    if (!rotated) return null;
+    const { session, refreshToken } = rotated;
+    const accessToken = this.signAccessToken({ sub: session.userId, email: session.user.email, sid: session.id, ver: session.user.authVersion });
+    return { accessToken, refreshToken, expiresAt: session.expiresAt };
+  }
+
+  /** Invalidate a refresh token (logout). */
+  async revokeRefreshToken(token: string | undefined): Promise<void> {
+    await this.sessions.revoke(token);
+  }
+
+  async signup(dto: RegisterDto) {
+    // 1️check for existing email
+    const existing = await this.prismaService.user.findUnique({
+      where: { email: dto.email.toLowerCase() },
+    });
+    if (existing) {
+      throw new BadRequestException('Email already registered');
+    }
+
+    // hash password
+    const hashedPassword = await argon.hash(dto.password);
+
+    // create user (no createdAt field — Prisma fills it). The pre-check above is
+    // a fast path; the unique constraint is the real guard against a concurrent
+    // signup with the same email/username, so handle P2002 gracefully here.
+    let user;
+    try {
+      user = await this.prismaService.user.create({
+        data: {
+          username: dto.username,
+          email: dto.email.toLowerCase(),
+          password: hashedPassword,
+          provider: 'credentials',
+        },
+      });
+    } catch (e) {
+      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+        const target = (e.meta?.target as string[] | undefined) ?? [];
+        const field = target.includes('username') ? 'Username' : 'Email';
+        throw new BadRequestException(`${field} already registered`);
+      }
+      throw e;
+    }
+
+    const { password, ...result } = user;
+    return {
+      message: 'User created successfully',
+      user: result,
+    };
+  }
+
+  async signin(dto: LoginDto) {
+    // Normalise to match how signup stores emails (lowercased), otherwise a
+    // mixed-case login silently fails to find an existing account.
+    const user = await this.prismaService.user.findUnique({
+      where: {
+        email: dto.email.toLowerCase(),
+      },
+    });
+
+    // Use one generic message for "no such email" and "wrong password" so the
+    // endpoint can't be used to enumerate which emails are registered.
+    if (!user || !user.password) {
+      // A passwordless account is a Google-only account; surface that hint only
+      // when the email actually matched, since the account's existence is
+      // already implied by the user reaching this screen via Google.
+      if (user && !user.password) {
+        throw new BadRequestException(
+          'This account uses Google sign-in. Use "Continue with Google" or set a password first.'
+        );
+      }
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const pwMatches = await argon.verify(user.password, dto.password);
+    if (!pwMatches) throw new UnauthorizedException('Invalid email or password');
+
+    return {
+      message: 'Login successful',
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+      },
+    };
+  }
+
+
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prismaService.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+    if (!user) throw new ForbiddenException('User not found');
+
+    if (!user.password) {
+      throw new BadRequestException('No local password set for this account. Use "Set password" first.');
+    }
+
+
+
+    const ok = await argon.verify(user.password, dto.oldPassword);
+    if (!ok) throw new UnauthorizedException('Old password is incorrect');
+
+    const hash = await argon.hash(dto.newPassword);
+    await this.prismaService.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: userId }, data: { password: hash, authVersion: { increment: 1 } } });
+      await tx.authSession.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+    });
+    return { ok: true };
+  }
+
+  /**
+   * Atomic, race-safe find-or-create for a Google account, keyed on email.
+   * Concurrent first-time logins can't create duplicate users: the upsert (and
+   * its P2002 fallback) collapses the race to a single row. Username is only set
+   * on create — never changed on login — so it can't collide with another user.
+   */
+  private async upsertGoogleAccount(p: {
+    email: string;
+    name?: string;
+    googleId: string;
+    picture?: string | null;
+  }) {
+    const { email, name, googleId, picture } = p;
+
+    const createData = {
+      email,
+      username: name || email.split('@')[0],
+      provider: 'google',
+      googleId,
+      avatarUrl: picture ?? null,
+      password: await argon.hash(`google:${uuid()}`),
+    };
+    const updateData = {
+      provider: 'google',
+      googleId,
+      ...(picture ? { avatarUrl: picture } : {}),
+    };
+
+    try {
+      return await this.prismaService.user.upsert({
+        where: { email },
+        create: createData,
+        update: updateData,
+      });
+    } catch (e) {
+      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+        const target = (e.meta?.target as string[] | undefined) ?? [];
+        // Lost the create race on email — the row now exists; just update it.
+        if (target.includes('email')) {
+          return this.prismaService.user.update({ where: { email }, data: updateData });
+        }
+        // Display-name collided with a different user — retry with a unique suffix.
+        if (target.includes('username')) {
+          return this.prismaService.user.create({
+            data: { ...createData, username: `${createData.username}-${uuid().slice(0, 6)}` },
+          });
+        }
+      }
+      throw e;
+    }
+  }
+
+  async googleLoginOrRegister(params: {
+    email: string;
+    name?: string;
+    googleId: string;
+    picture?: string;
+  }) {
+    const user = await this.upsertGoogleAccount(params);
+    return { user };
+  }
+
+  async upsertGoogleUser(profile: any) {
+    const { email, name, picture, googleId } = profile;
+    return this.upsertGoogleAccount({ email, name, googleId, picture });
+  }
+
+  async getAchievementProgress(userId: string) {
+    return this.achievements ? (await this.achievements.getMe(userId)).achievements : [];
+  }
+
+  async requestPasswordReset(email: string) {
+    const normalizedEmail = String(email ?? '').toLowerCase().trim();
+    const user = await this.prismaService.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+    if (!user) {
+      // Generic response — never reveal whether the email is registered.
+      return { success: true, message: 'If this email exists, a code was sent.' };
+    }
+
+    // crypto.randomInt is cryptographically secure; Math.random is predictable
+    // and unacceptable for a security token.
+    const code = String(randomInt(100000, 1000000));
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await this.prismaService.emailVerification.create({
+      data: { email: normalizedEmail, code, expiresAt },
+    });
+
+    // Never log reset codes. Development and staging logs are still durable
+    // enough to leak credentials through terminals, CI, or hosted log drains.
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.debug(`Password reset requested for ${normalizedEmail}`);
+    }
+
+    // Send in the background — the HTTP response must not block on (or fail
+    // because of) SMTP. Errors are logged server-side; the client always gets the
+    // generic "if this email exists" reply, so response timing can't reveal
+    // whether the account exists, and a slow/broken mailer never hangs the request.
+    void sendVerificationCode(normalizedEmail, code).catch((err) => {
+      this.logger.error(
+        'Failed to send password-reset email',
+        err instanceof Error ? err.stack : String(err),
+      );
+    });
+
+    return { success: true, message: 'If this email exists, a code was sent.' };
+  }
+
+  async verifyResetCode(email: string, code: string) {
+    const normalizedEmail = String(email ?? '').toLowerCase().trim();
+    // Atomically flip an unused, unexpired code to verified. Doing the match and
+    // the write in one statement prevents two concurrent verifies from racing.
+    const { count } = await this.prismaService.emailVerification.updateMany({
+      where: { email: normalizedEmail, code, verified: false, expiresAt: { gt: new Date() } },
+      data: { verified: true },
+    });
+
+    if (count > 0) {
+      return { success: true, message: 'Email verified. You may now reset password.' };
+    }
+
+    // Nothing flipped — figure out why for a helpful message.
+    const record = await this.prismaService.emailVerification.findFirst({
+      where: { email: normalizedEmail, code },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!record) return { success: false, message: 'Invalid verification code.' };
+    if (record.expiresAt < new Date()) return { success: false, message: 'Code expired.' };
+    return { success: false, message: 'Code already used.' };
+  }
+
+  async resetPassword(email: string, newPassword: string) {
+    // Inline body (no DTO) — enforce password strength explicitly.
+    if (typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 100) {
+      throw new BadRequestException('Password must be between 8 and 100 characters');
+    }
+    const normalizedEmail = String(email ?? '').toLowerCase().trim();
+    const hash = await argon.hash(newPassword);
+
+    // Atomically consume the verified token first, so it can't be replayed by a
+    // concurrent reset. Only proceed to set the password if we actually consumed one.
+    const changed = await this.prismaService.$transaction(async (tx) => {
+      const { count } = await tx.emailVerification.updateMany({
+        where: { email: normalizedEmail, verified: true, expiresAt: { gt: new Date() } },
+        data: { verified: false },
+      });
+      if (count === 0) return false;
+      const user = await tx.user.update({
+        where: { email: normalizedEmail }, data: { password: hash, authVersion: { increment: 1 } },
+      });
+      await tx.authSession.updateMany({ where: { userId: user.id, revokedAt: null }, data: { revokedAt: new Date() } });
+      return true;
+    });
+    if (!changed) {
+      return { success: false, message: 'Email not verified for password reset.' };
+    }
+
+    return { success: true, message: 'Password reset successful.' };
+  }
+
+  // ── Profile / preferences ──────────────────────────────────────────────────
+
+  async updateProfile(userId: string, body: UpdateProfileDto) {
+    const { name, username, disclosure } = body;
+    if (!name?.trim() && !username?.trim() && !disclosure) {
+      throw new BadRequestException('At least one profile field is required');
+    }
+
+    const data: {
+      name?: string;
+      username?: string;
+      discloseProfileInfo?: boolean;
+      discloseWatchlist?: boolean;
+      discloseReviews?: boolean;
+      discloseLiked?: boolean;
+      discloseBadges?: boolean;
+      discloseRecentActivity?: boolean;
+    } = {};
+    if (name?.trim()) {
+      if (name.trim().length < 2 || name.trim().length > 50) {
+        throw new BadRequestException('Display name must be between 2 and 50 characters');
+      }
+      data.name = name.trim();
+    }
+    if (username?.trim()) {
+      // basic username validation
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(username.trim())) {
+        throw new BadRequestException('Username must be 3-20 characters and contain only letters, numbers, or underscores');
+      }
+      // explicit duplicate check — catch it before hitting the DB constraint
+      const existing = await this.prismaService.user.findUnique({
+        where: { username: username.trim() },
+        select: { id: true },
+      });
+      if (existing && existing.id !== String(userId)) {
+        throw new BadRequestException('Username is already taken');
+      }
+      data.username = username.trim();
+    }
+    if (disclosure) {
+      if (typeof disclosure.profileInfo === 'boolean') data.discloseProfileInfo = disclosure.profileInfo;
+      if (typeof disclosure.watchlist === 'boolean') data.discloseWatchlist = disclosure.watchlist;
+      if (typeof disclosure.reviews === 'boolean') data.discloseReviews = disclosure.reviews;
+      if (typeof disclosure.liked === 'boolean') data.discloseLiked = disclosure.liked;
+      if (typeof disclosure.badges === 'boolean') data.discloseBadges = disclosure.badges;
+      if (typeof disclosure.recentActivity === 'boolean') data.discloseRecentActivity = disclosure.recentActivity;
+    }
+
+    try {
+      const updated = await this.prismaService.user.update({
+        where: { id: String(userId) },
+        data,
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          discloseProfileInfo: true,
+          discloseWatchlist: true,
+          discloseReviews: true,
+          discloseLiked: true,
+          discloseBadges: true,
+          discloseRecentActivity: true,
+        },
+      });
+      return {
+        id: updated.id,
+        name: updated.name,
+        username: updated.username,
+        disclosure: {
+          profileInfo: updated.discloseProfileInfo,
+          watchlist: updated.discloseWatchlist,
+          reviews: updated.discloseReviews,
+          liked: updated.discloseLiked,
+          badges: updated.discloseBadges,
+          recentActivity: updated.discloseRecentActivity,
+        },
+      };
+    } catch (e: any) {
+      if (e?.code === 'P2002') {
+        throw new BadRequestException('Username is already taken');
+      }
+      throw e;
+    }
+  }
+
+  async updateAvatar(userId: string, avatarUrl: string) {
+    if (!avatarUrl) throw new BadRequestException('avatarUrl is required');
+
+    // Accept base64 data URLs (image/*) or https URLs
+    const isBase64 = avatarUrl.startsWith('data:image/');
+    const isHttps = avatarUrl.startsWith('https://');
+    if (!isBase64 && !isHttps) {
+      throw new BadRequestException('avatarUrl must be a base64 data URL or https URL');
+    }
+
+    // Enforce a ~200KB limit on base64 payloads (~150KB image after encoding overhead)
+    if (isBase64 && avatarUrl.length > 200_000) {
+      throw new BadRequestException('Image too large. Please upload a smaller image.');
+    }
+
+    // Base64 uploads go to object storage; we persist only the resulting URL so the
+    // User row (returned on every /auth/me) stays small instead of carrying ~200KB.
+    const finalUrl = isBase64
+      ? await uploadAvatarToStorage(avatarUrl, userId)
+      : avatarUrl;
+
+    return this.prismaService.user.update({
+      where: { id: String(userId) },
+      data: { avatarUrl: finalUrl },
+      select: { id: true, avatarUrl: true },
+    });
+  }
+
+  async getMe(userId: string) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: String(userId) },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        email: true,
+        avatarUrl: true,
+        provider: true,
+        reviewBannedUntil: true,
+        reviewWarningScore: true,
+        age: true,
+        preferredGenres: true,
+        preferredLanguages: true,
+        discloseProfileInfo: true,
+        discloseWatchlist: true,
+        discloseReviews: true,
+        discloseLiked: true,
+        discloseBadges: true,
+        discloseRecentActivity: true,
+      },
+    });
+    return user && ({
+      ...user,
+      disclosure: {
+        profileInfo: user.discloseProfileInfo,
+        watchlist: user.discloseWatchlist,
+        reviews: user.discloseReviews,
+        liked: user.discloseLiked,
+        badges: user.discloseBadges,
+        recentActivity: user.discloseRecentActivity,
+      },
+    });
+  }
+
+  async getBootstrapFromAccessToken(accessToken: string | undefined) {
+    if (!accessToken) {
+      return {
+        isAuthenticated: false,
+        user: null,
+        watchlist: null,
+        liked: null,
+      };
+    }
+
+    let payload: AccessIdentity;
+    try {
+      payload = await this.jwt.verifyAsync<AccessIdentity>(accessToken, {
+        secret: process.env.JWT_SECRET,
+      });
+    } catch {
+      return {
+        isAuthenticated: false,
+        user: null,
+        watchlist: null,
+        liked: null,
+      };
+    }
+
+    if (!payload.sub || !await this.sessions.isActive(payload)) {
+      return {
+        isAuthenticated: false,
+        user: null,
+        watchlist: null,
+        liked: null,
+      };
+    }
+
+    const user = await this.prismaService.user.findUnique({
+      where: { id: String(payload.sub) },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        email: true,
+        avatarUrl: true,
+        provider: true,
+        watchlistItems: {
+          select: { tmdbId: true, mediaType: true },
+        },
+        likedItems: {
+          select: { tmdbId: true, mediaType: true },
+        },
+      },
+    });
+
+    if (!user) {
+      return {
+        isAuthenticated: false,
+        user: null,
+        watchlist: null,
+        liked: null,
+      };
+    }
+
+    const toBuckets = (
+      items: Array<{ tmdbId: number; mediaType: MediaType }>,
+    ) => {
+      const movieId: string[] = [];
+      const seriesId: string[] = [];
+      for (const item of items) {
+        (item.mediaType === MediaType.MOVIE ? movieId : seriesId).push(
+          String(item.tmdbId),
+        );
+      }
+      return { movieId, seriesId };
+    };
+
+    const { watchlistItems, likedItems, ...safeUser } = user;
+
+    return {
+      isAuthenticated: true,
+      user: safeUser,
+      watchlist: toBuckets(watchlistItems),
+      liked: toBuckets(likedItems),
+    };
+  }
+
+  async updatePreferences(
+    userId: string,
+    body: { age?: number; preferredGenres?: string[]; preferredLanguages?: string[] },
+  ) {
+    const { age, preferredGenres, preferredLanguages } = body;
+
+    const data: any = {};
+    if (typeof age === 'number') data.age = age;
+    if (Array.isArray(preferredGenres)) data.preferredGenres = { set: preferredGenres };
+    if (Array.isArray(preferredLanguages)) data.preferredLanguages = { set: preferredLanguages };
+
+    return this.prismaService.user.update({
+      where: { id: String(userId) },
+      data,
+      select: {
+        id: true,
+        email: true,
+        age: true,
+        preferredGenres: true,
+        preferredLanguages: true,
+      },
+    });
+  }
+
+}

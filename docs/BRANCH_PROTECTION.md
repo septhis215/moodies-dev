@@ -12,7 +12,7 @@ Recommended protection for `trunk`:
 
 Security-sensitive paths:
 
-- `server/src/auth/**`
+- `server/src/modules/auth/**`
 - `server/src/common/guards/**`
 - `server/prisma/**`
 - `client/app/auth/**`

@@ -33,42 +33,42 @@ Context7 was used before implementation for current docs:
 | Base Redis wrapper | `server/src/redis/redis.service.ts` | caller-provided | JSON strings, rate counters, locks | caller-provided | Medium | High | Keep central service; now fail-open for generic cache reads and provides SCAN diagnostics. |
 | Single-flight locks | `server/src/redis/redis.service.ts` | `lock:{key}` | lock marker | 10s | Low | High | Keep. Prevents stampedes for expensive cache misses. |
 | Rate limiting | `server/src/common/guards/rate-limit.guard.ts` | `rl:{client}:{method}:{path}` | request counters | 60s | Low | High | Keep. Good fixed-window atomic Lua script. |
-| Refresh tokens | `server/src/auth/auth.service.ts` | `rt:{sha256(token)}` | token -> userId | `REFRESH_EXPIRES_DAYS`, default 30d | High | Required | Keep. Changed from raw token key to hashed key with legacy fallback. |
-| Achievement progress | `server/src/auth/auth.service.ts` | `achievements:{userId}` | user achievement progress rows | 60s | Medium | Medium | Keep short TTL; consider invalidating after review/watchlist/like/mood writes if freshness matters. |
+| Refresh tokens | `server/src/modules/auth/auth.service.ts` | `rt:{sha256(token)}` | token -> userId | `REFRESH_EXPIRES_DAYS`, default 30d | High | Required | Keep. Changed from raw token key to hashed key with legacy fallback. |
+| Achievement progress | `server/src/modules/auth/auth.service.ts` | `achievements:{userId}` | user achievement progress rows | 60s | Medium | Medium | Keep short TTL; consider invalidating after review/watchlist/like/mood writes if freshness matters. |
 | TMDB generic request cache | `server/src/external-apis/services/tmdb.service.ts` | `tmdb:{absoluteUrl}?{query}` | TMDB response JSON | 1h-24h by endpoint | Medium | High | Keep but standardize/sanitize key names. Avoid full URLs long-term. |
 | TMDB keyword memory cache | `server/src/external-apis/services/tmdb.service.ts` | in-process `Map<number,...>` | keyword arrays | 1h, negative 5m | Low | Medium | Keep. Process-local, no Redis memory cost. |
 | Media read-through L1/L2 | `server/src/external-apis/services/media-cache.service.ts` | caller-provided | detail/recommendation bundles | caller-provided | Medium | High | Keep. Best architecture in repo. |
-| Movie details | `server/src/media/movies/details/movie-details.service.ts` | `detail:movie:{id}` | slim assembled detail bundle | Redis 6h, PG stale 30d | Low | High | Keep. Good L1/L2 split. Rename to namespaced key in next version. |
-| TV details | `server/src/media/tv/details/tv-details.service.ts` | `detail:tv:{id}` | slim assembled detail bundle | Redis 6h, PG stale 30d | Low | High | Keep. |
-| TV seasons | `server/src/media/tv/details/tv-details.service.ts` | `seasons:tv:{id}` | seasons + episodes bundle | Redis 6h, PG stale 7d | Medium | High | Keep, but monitor size for long-running shows. |
-| Movie recommendations | `server/src/media/movies/recommendations/movie-recommendations.service.ts` | `rec:movie:{id}:{limit}` | mapped recommendation list | Redis 6h, PG stale 1d | Low | High | Keep. |
-| TV recommendations | `server/src/media/tv/recommendations/tv-recommendations.service.ts` | `rec:tv:{id}:{limit}` | mapped recommendation list | Redis 6h, PG stale 1d | Low | High | Keep. |
-| Mixed recommendations | `server/src/media/all/recommendations/recommendations.service.ts` | `smart-rec-v2-{type}-{id}-{limit}` | mapped recommendation list | Redis 6h, PG stale 1d | Medium | High | Keep, but rename to colon namespaced key. |
-| Background recommendation hydration | `server/src/media/all/recommendations/recommendations.service.ts` | existing list key | list with embedded recommendations | 24h | Medium | Medium | Review. This can increase payload size under homepage/list keys. |
-| Movie catalog lists | `server/src/media/movies/catalog/movie-catalog.service.ts` | `movies:{section}:{limit}` | public movie list arrays | 6h | Low | High | Keep. Good TTL. |
-| TV catalog lists | `server/src/media/tv/catalog/tv-catalog.service.ts` | `tv:{section}:{limit}` | public TV list arrays | 6h | Low | High | Keep. Good TTL. |
-| TV new releases | `server/src/media/tv/new-releases/tv-new-releases.service.ts` | `tv:newReleases:{limit}` | public TV list array | 6h | Low | High | Keep. |
-| Category pages | `server/src/media/category/category.service.ts` | `category:{section}:{page}:{limit}` | public mixed category responses | 24h | Medium | High | Shorten dynamic sections; comments say shorter TTLs but code uses 24h. |
-| All featured/trending/Korea | `server/src/media/all/trending/trending.service.ts` | `featured`, `trending-{limit}`, `koreaTrending-{limit}` | public mixed list arrays | 24h | Medium | High | Rename and reduce trending TTL. Root keys are collision-prone. |
-| Football stories | `server/src/media/all/trending/trending.service.ts` | `world-cup-football-docs:*` | curated raw/ranked football doc collections | 8h, last-good 14d | Medium | Medium | Keep with max collection size; last-good is acceptable but monitor size. |
-| Video feed page | `server/src/media/all/feed/video-feed.service.ts` | `video-feed:{type}:{page}:{limit}:{salt}:{viewer}:{historySeed}` | personalized-ish feed page | 12m | Medium | Medium | Keep TTL short; user-keyed variants can multiply quickly. |
-| Viewed trailer history | `server/src/media/all/feed/feed-utils.service.ts` | `video-feed-viewed:{viewerId}` | last 200 viewed trailer entries | 45d | High | Medium | Consider shortening to 14-30d or store in Postgres if durable personalization is needed. |
-| Feed TMDB subrequests | `server/src/media/all/feed/feed-utils.service.ts` | `tmdb:{sanitizedEndpoint}` | TMDB response JSON | 24h currently via `CACHE_TTL.BASIC_DATA` | Medium | High | Lower dynamic feed/discover/trending TTL to 1-6h. |
-| Feed videos | `server/src/media/all/feed/feed-utils.service.ts` | `feed-videos:{type}:{id}` | video response | 24h | Low | High | Keep or reduce to 12h. |
-| YouTube oEmbed availability | `server/src/media/all/feed/feed-utils.service.ts` | `youtube-oembed:{videoKey}` | boolean availability | 24h | Low | Medium | Keep. Negative values may stale; acceptable. |
-| Upcoming feed page | `server/src/media/all/trailers/upcoming-feed.service.ts` | `upcoming-feed:{page}:{limit}:{viewer}:{historySeed}` | feed page response | 20m | Medium | Medium | Keep short. |
-| Upcoming feed details | `server/src/media/all/trailers/upcoming-feed.service.ts` | `feed-detail:{type}:{id}` | details with videos | 24h | Medium | High | Consider 6-12h for unreleased titles. |
-| Enhanced trailers | `server/src/media/all/trailers/trailers.service.ts` | `trailers-enhanced-{limit}` | trailer list | intended cache read only; write missing | Low | Medium | Bug/opportunity: currently reads but does not set this key in `getTrailers`. |
-| Per-item trailer key | `server/src/media/all/trailers/trailers.service.ts` | `trailer:{type}:{id}` | YouTube trailer key or null | 24h | Low | High | Keep. Nulls are cached for 24h; consider 1-6h for misses. |
-| Movie trailers | `server/src/media/movies/trailers/movie-trailers.service.ts` | `movies:trailers:{limit}`, `movies:upcomingMonthly:*` | movie trailer lists | 6h | Low | High | Keep. |
-| TV trailers | `server/src/media/tv/trailers/tv-trailers.service.ts` | analogous `tv:*` | TV trailer lists | 6h | Low | High | Keep. |
-| People profile | `server/src/media/people/people.service.ts` | `people:profile:{id}:v2` | shaped person details | 6h | Medium | High | Keep; shaping trims images/credits, good. |
-| People credits/images | `server/src/media/people/people.service.ts` | `people:credits:*`, `people:images:*`, `people:tagged-images:*` | person credits/images | 6h | Medium | Medium | Consider not Redis-caching full `tagged_images`; TMDBService skips image caches but PeopleService caches them. |
-| People sections | `server/src/media/people/people.service.ts` | `people:similar:*`, `people:upcoming:*`, `people:collaborations:*` | computed people sections | 2h | Low | Medium | Keep. |
-| People media videos | `server/src/media/people/people.service.ts` | `people:media-videos:{type}:{id}:en-US:v1` | video arrays | 12h | Low | Medium | Keep. |
-| People related videos | `server/src/media/people/people.service.ts` | `people:related-videos:{id}:v3` plus in-process map | shaped related videos | 4h | Low | Medium | Keep. |
-| Search cache | `server/src/routes/search/search.service.ts` | in-process map | search response | local TTL in service | Low | Medium | Not Redis. Good for memory isolation but per-instance only. |
-| Moods genre cache | `server/src/routes/moods/moods.service.ts` | in-process fields | genre data | 24h in memory | Low | Medium | Not Redis. Keep. |
+| Movie details | `server/src/modules/media/movies/details/movie-details.service.ts` | `detail:movie:{id}` | slim assembled detail bundle | Redis 6h, PG stale 30d | Low | High | Keep. Good L1/L2 split. Rename to namespaced key in next version. |
+| TV details | `server/src/modules/media/tv/details/tv-details.service.ts` | `detail:tv:{id}` | slim assembled detail bundle | Redis 6h, PG stale 30d | Low | High | Keep. |
+| TV seasons | `server/src/modules/media/tv/details/tv-details.service.ts` | `seasons:tv:{id}` | seasons + episodes bundle | Redis 6h, PG stale 7d | Medium | High | Keep, but monitor size for long-running shows. |
+| Movie recommendations | `server/src/modules/media/movies/recommendations/movie-recommendations.service.ts` | `rec:movie:{id}:{limit}` | mapped recommendation list | Redis 6h, PG stale 1d | Low | High | Keep. |
+| TV recommendations | `server/src/modules/media/tv/recommendations/tv-recommendations.service.ts` | `rec:tv:{id}:{limit}` | mapped recommendation list | Redis 6h, PG stale 1d | Low | High | Keep. |
+| Mixed recommendations | `server/src/modules/media/all/recommendations/recommendations.service.ts` | `smart-rec-v2-{type}-{id}-{limit}` | mapped recommendation list | Redis 6h, PG stale 1d | Medium | High | Keep, but rename to colon namespaced key. |
+| Background recommendation hydration | `server/src/modules/media/all/recommendations/recommendations.service.ts` | existing list key | list with embedded recommendations | 24h | Medium | Medium | Review. This can increase payload size under homepage/list keys. |
+| Movie catalog lists | `server/src/modules/media/movies/catalog/movie-catalog.service.ts` | `movies:{section}:{limit}` | public movie list arrays | 6h | Low | High | Keep. Good TTL. |
+| TV catalog lists | `server/src/modules/media/tv/catalog/tv-catalog.service.ts` | `tv:{section}:{limit}` | public TV list arrays | 6h | Low | High | Keep. Good TTL. |
+| TV new releases | `server/src/modules/media/tv/new-releases/tv-new-releases.service.ts` | `tv:newReleases:{limit}` | public TV list array | 6h | Low | High | Keep. |
+| Category pages | `server/src/modules/media/category/category.service.ts` | `category:{section}:{page}:{limit}` | public mixed category responses | 24h | Medium | High | Shorten dynamic sections; comments say shorter TTLs but code uses 24h. |
+| All featured/trending/Korea | `server/src/modules/media/all/trending/trending.service.ts` | `featured`, `trending-{limit}`, `koreaTrending-{limit}` | public mixed list arrays | 24h | Medium | High | Rename and reduce trending TTL. Root keys are collision-prone. |
+| Football stories | `server/src/modules/media/all/trending/trending.service.ts` | `world-cup-football-docs:*` | curated raw/ranked football doc collections | 8h, last-good 14d | Medium | Medium | Keep with max collection size; last-good is acceptable but monitor size. |
+| Video feed page | `server/src/modules/media/all/feed/video-feed.service.ts` | `video-feed:{type}:{page}:{limit}:{salt}:{viewer}:{historySeed}` | personalized-ish feed page | 12m | Medium | Medium | Keep TTL short; user-keyed variants can multiply quickly. |
+| Viewed trailer history | `server/src/modules/media/all/feed/feed-utils.service.ts` | `video-feed-viewed:{viewerId}` | last 200 viewed trailer entries | 45d | High | Medium | Consider shortening to 14-30d or store in Postgres if durable personalization is needed. |
+| Feed TMDB subrequests | `server/src/modules/media/all/feed/feed-utils.service.ts` | `tmdb:{sanitizedEndpoint}` | TMDB response JSON | 24h currently via `CACHE_TTL.BASIC_DATA` | Medium | High | Lower dynamic feed/discover/trending TTL to 1-6h. |
+| Feed videos | `server/src/modules/media/all/feed/feed-utils.service.ts` | `feed-videos:{type}:{id}` | video response | 24h | Low | High | Keep or reduce to 12h. |
+| YouTube oEmbed availability | `server/src/modules/media/all/feed/feed-utils.service.ts` | `youtube-oembed:{videoKey}` | boolean availability | 24h | Low | Medium | Keep. Negative values may stale; acceptable. |
+| Upcoming feed page | `server/src/modules/media/all/trailers/upcoming-feed.service.ts` | `upcoming-feed:{page}:{limit}:{viewer}:{historySeed}` | feed page response | 20m | Medium | Medium | Keep short. |
+| Upcoming feed details | `server/src/modules/media/all/trailers/upcoming-feed.service.ts` | `feed-detail:{type}:{id}` | details with videos | 24h | Medium | High | Consider 6-12h for unreleased titles. |
+| Enhanced trailers | `server/src/modules/media/all/trailers/trailers.service.ts` | `trailers-enhanced-{limit}` | trailer list | intended cache read only; write missing | Low | Medium | Bug/opportunity: currently reads but does not set this key in `getTrailers`. |
+| Per-item trailer key | `server/src/modules/media/all/trailers/trailers.service.ts` | `trailer:{type}:{id}` | YouTube trailer key or null | 24h | Low | High | Keep. Nulls are cached for 24h; consider 1-6h for misses. |
+| Movie trailers | `server/src/modules/media/movies/trailers/movie-trailers.service.ts` | `movies:trailers:{limit}`, `movies:upcomingMonthly:*` | movie trailer lists | 6h | Low | High | Keep. |
+| TV trailers | `server/src/modules/media/tv/trailers/tv-trailers.service.ts` | analogous `tv:*` | TV trailer lists | 6h | Low | High | Keep. |
+| People profile | `server/src/modules/media/people/people.service.ts` | `people:profile:{id}:v2` | shaped person details | 6h | Medium | High | Keep; shaping trims images/credits, good. |
+| People credits/images | `server/src/modules/media/people/people.service.ts` | `people:credits:*`, `people:images:*`, `people:tagged-images:*` | person credits/images | 6h | Medium | Medium | Consider not Redis-caching full `tagged_images`; TMDBService skips image caches but PeopleService caches them. |
+| People sections | `server/src/modules/media/people/people.service.ts` | `people:similar:*`, `people:upcoming:*`, `people:collaborations:*` | computed people sections | 2h | Low | Medium | Keep. |
+| People media videos | `server/src/modules/media/people/people.service.ts` | `people:media-videos:{type}:{id}:en-US:v1` | video arrays | 12h | Low | Medium | Keep. |
+| People related videos | `server/src/modules/media/people/people.service.ts` | `people:related-videos:{id}:v3` plus in-process map | shaped related videos | 4h | Low | Medium | Keep. |
+| Search cache | `server/src/modules/search/search.service.ts` | in-process map | search response | local TTL in service | Low | Medium | Not Redis. Good for memory isolation but per-instance only. |
+| Moods genre cache | `server/src/modules/moods/moods.service.ts` | in-process fields | genre data | 24h in memory | Low | Medium | Not Redis. Keep. |
 
 ## Cache Key Audit
 
@@ -254,7 +254,7 @@ Recommended next step:
 - Recommended change: split TTL constants into `TRENDING`, `CATEGORY`, `DETAIL`, `TRAILER`, `GENRE`, `FEED_SOURCE`.
 - Expected benefit: fresher UI and lower stale memory pressure.
 - Risk: low to medium; may increase TMDB calls slightly.
-- Files affected: `server/src/media/all/utils/helpers.ts`, category/feed/trending services.
+- Files affected: `server/src/modules/media/all/utils/helpers.ts`, category/feed/trending services.
 
 ### Priority 3: Stop caching large image lists in PeopleService
 
@@ -263,7 +263,7 @@ Recommended next step:
 - Recommended change: slim tagged image payloads or bypass Redis for tagged images.
 - Expected benefit: lower Redis memory usage.
 - Risk: low.
-- Files affected: `server/src/media/people/people.service.ts`.
+- Files affected: `server/src/modules/media/people/people.service.ts`.
 
 ### Priority 4: Cap or shorten viewed trailer history
 
@@ -272,7 +272,7 @@ Recommended next step:
 - Recommended change: 14-30d TTL or move durable history to PostgreSQL if needed.
 - Expected benefit: predictable memory cost.
 - Risk: medium UX impact if users revisit feeds after long gaps.
-- Files affected: `server/src/media/all/feed/feed-utils.service.ts`.
+- Files affected: `server/src/modules/media/all/feed/feed-utils.service.ts`.
 
 ### Priority 5: Admin-only cache diagnostics
 

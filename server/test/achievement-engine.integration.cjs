@@ -12,23 +12,23 @@ require('tsconfig-paths').register({
 const { ConfigService } = require('@nestjs/config');
 const {
   AchievementCatalogService,
-} = require('../dist/achievements/achievement-catalog.service');
+} = require('../dist/modules/achievements/achievement-catalog.service');
 const {
   AchievementEvidenceService,
-} = require('../dist/achievements/achievement-evidence.service');
+} = require('../dist/modules/achievements/achievement-evidence.service');
 const {
   AchievementProcessorService,
-} = require('../dist/achievements/achievement-processor.service');
+} = require('../dist/modules/achievements/achievement-processor.service');
 const {
   AchievementWorkerService,
-} = require('../dist/achievements/achievement-worker.service');
-const { WatchlistService } = require('../dist/watchlist/watchlist.service');
+} = require('../dist/modules/achievements/achievement-worker.service');
+const { WatchlistService } = require('../dist/modules/watchlist/watchlist.service');
 const {
   AchievementsService,
-} = require('../dist/achievements/achievements.service');
+} = require('../dist/modules/achievements/achievements.service');
 const {
   AchievementOperationsService,
-} = require('../dist/achievements/achievement-operations.service');
+} = require('../dist/modules/achievements/achievement-operations.service');
 const { randomUUID } = require('node:crypto');
 const url =
   process.env.ACHIEVEMENT_TEST_DATABASE_URL ||
@@ -580,7 +580,7 @@ async function check(name, run) {
       await drain();
       const {
         calendarKeys,
-      } = require('../dist/achievements/achievement-rules');
+      } = require('../dist/modules/achievements/achievement-rules');
       assert.ok(
         await prisma.achievementFact.findUnique({
           where: {
@@ -938,7 +938,7 @@ async function check(name, run) {
   await check(
     'public profiles respect badge disclosure and omit private evidence',
     async () => {
-      const { ReviewService } = require('../dist/routes/review/review.service');
+      const { ReviewService } = require('../dist/modules/review/review.service');
       const reviews = new ReviewService(
         prisma,
         null,
@@ -970,9 +970,9 @@ async function check(name, run) {
       const request = require('supertest');
       const {
         AchievementsController,
-      } = require('../dist/achievements/achievements.controller');
-      const { JwtStrategy } = require('../dist/auth/strategy/jwt.strategy');
-      const { CookieOriginGuard } = require('../dist/auth/cookie-origin.guard');
+      } = require('../dist/modules/achievements/achievements.controller');
+      const { JwtStrategy } = require('../dist/modules/auth/strategy/jwt.strategy');
+      const { CookieOriginGuard } = require('../dist/modules/auth/cookie-origin.guard');
       const config = new ConfigService({
         JWT_SECRET: 'isolated-achievement-test-secret',
         CORS_ORIGINS: 'https://app.example.test',

@@ -98,6 +98,15 @@ proxy rather than exposing the frontend/API or database ports directly.
 - Configure `CLIENT_URL`, `CORS_ORIGINS`, and `GOOGLE_CALLBACK_URL` with the real public
   origins for each environment.
 
+For a local Windows backend accessing Dokploy services on the Hostinger VPS, use
+the [Docker-managed SSH tunnels](deploy/ssh-tunnels.md). The
+[Redis guide](deploy/redis-tunnel/README.md) exposes `127.0.0.1:16379`, and the
+[PostgreSQL guide](deploy/postgres-tunnel/README.md) exposes `127.0.0.1:15432`.
+Both include fresh-developer key generation, host verification, VPS authorization,
+private relay setup, and local environment configuration. Start both Docker
+applications when the backend needs both services. Hosted APIs use Dokploy internal
+hostnames; Windows uses these localhost ports. Local writes affect staging data.
+
 ### Transactional email: Hostinger SMTP
 
 Configure these variables on the **backend** in Dokploy (or in the active Doppler
