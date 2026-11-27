@@ -8,10 +8,10 @@ const ts = require('typescript');
 const { Logger } = require('@nestjs/common');
 const { ConfigService } = require('@nestjs/config');
 const { HttpService } = require('@nestjs/axios');
-const { MoodsService } = require('../src/routes/moods/moods.service');
+const { MoodsService } = require('../src/modules/moods/moods.service');
 const { TMDBService } = require('../src/external-apis/services/tmdb.service');
 const { TmdbRateLimiterService } = require('../src/external-apis/services/tmdb-rate-limiter.service');
-const { profiles } = require('../src/routes/moods/mood-review.fixtures');
+const { profiles } = require('../src/modules/moods/mood-review.fixtures');
 const { seedMoods } = require('../prisma/seed/moods.seed');
 const { seededValue } = require('../src/utils/recommendation-ranking');
 
@@ -21,9 +21,12 @@ async function main() {
   const requestedReference = baselineIndex < 0 ? 'HEAD' : process.argv[baselineIndex + 1];
   if (baselineIndex >= 0 && !/^[a-f0-9]{7,40}$/i.test(requestedReference || '')) throw new Error('--baseline requires a commit SHA');
   const reference = execFileSync('git', ['rev-parse', '--verify', `${requestedReference}^{commit}`], { encoding: 'utf8' }).trim();
-  const source = execFileSync('git', ['show', `${reference}:server/src/routes/moods/moods.service.ts`], { encoding: 'utf8' });
-  const baselineModule = new Module(path.resolve('src/routes/moods/baseline.cjs'), module);
-  baselineModule.filename = path.resolve('src/routes/moods/baseline.cjs');
+  const baselinePath = execFileSync('git', ['ls-tree', '--full-tree', '-r', '--name-only', reference, '--',
+    'server/src/modules/moods/moods.service.ts', 'server/src/routes/moods/moods.service.ts'], { encoding: 'utf8' }).trim();
+  if (!baselinePath) throw new Error(`No moods service found in baseline ${reference}`);
+  const source = execFileSync('git', ['show', `${reference}:${baselinePath}`], { encoding: 'utf8' });
+  const baselineModule = new Module(path.resolve('src/modules/moods/baseline.cjs'), module);
+  baselineModule.filename = path.resolve('src/modules/moods/baseline.cjs');
   baselineModule.paths = module.paths;
   baselineModule._compile(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, experimentalDecorators: true, emitDecoratorMetadata: true, esModuleInterop: true } }).outputText, baselineModule.filename);
   const baseline = new baselineModule.exports.MoodsService({}, {});
@@ -79,10 +82,10 @@ async function main() {
   const overlap = (a, b) => a.filter(item => b.some(other => other.tmdbId === item.tmdbId)).length;
   const report = { reference, mode: live ? 'same live candidate pool scored by both engines; not a user relevance study' : 'synthetic regression fixtures; not live catalogue quality', generatedAt: new Date().toISOString(), pagination: { duplicateTitlesBefore: overlap(oldFirst, oldSecond), duplicateTitlesAfter: overlap(ordered.slice(0, 10), ordered.slice(10, 20)), reportedFirstPageTotalBefore: oldFirst.length, reportedFirstPageTotalAfter: ordered.length }, moods: rows };
   if (feedOnly) {
-    const { VideoFeedService } = require('../src/media/all/feed/video-feed.service');
-    const { FeedUtilsService } = require('../src/media/all/feed/feed-utils.service');
-    const { TmdbClientService } = require('../src/media/all/client/tmdb-client.service');
-    const { VideoScoringService } = require('../src/media/all/videos/video-scoring.service');
+    const { VideoFeedService } = require('../src/modules/media/all/feed/video-feed.service');
+    const { FeedUtilsService } = require('../src/modules/media/all/feed/feed-utils.service');
+    const { TmdbClientService } = require('../src/modules/media/all/client/tmdb-client.service');
+    const { VideoScoringService } = require('../src/modules/media/all/videos/video-scoring.service');
     const utils = new FeedUtilsService(new TmdbClientService(tmdb, new ConfigService(env)), cache, new VideoScoringService());
     const feed = new VideoFeedService(cache, utils);
     let sourceCalls = 0;

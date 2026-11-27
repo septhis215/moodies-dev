@@ -187,24 +187,26 @@ server/
 ├── src/
 │   ├── main.ts                 # global 'api' prefix, CORS allowlist, validation pipe, port
 │   ├── app.module.ts           # Joi env contract, ScheduleModule, global RateLimitGuard
-│   ├── auth/                   # signup/signin/refresh/logout, Google OAuth, Argon2/bcrypt,
-│   │                           # cookie naming, JWT + Turnstile guards, email sending
 │   ├── common/                 # AllExceptionsFilter, guards, Turnstile verification
+│   ├── emails/                 # shared email templates
 │   ├── external-apis/tmdb/     # TMDB HTTP services behind a bottleneck rate limiter
 │   ├── jobs/                   # @nestjs/schedule cron tasks (cache warm, stat sync)
-│   ├── liked/                  # per-user like rows: GET / POST toggle / DELETE
-│   ├── watchlist/              # per-user watchlist rows: GET / POST toggle / POST clear / DELETE
-│   ├── media/                  # all/, movies/, tv/, people/, category/
-│   ├── media-stats/            # batch counters + community-pulse
+│   ├── modules/                # feature modules: controllers, services, DTOs, tests
+│   │   ├── achievements/       # badge catalogue, progress, evidence, workers
+│   │   ├── auth/               # sessions, OAuth, cookies, JWT guards, account endpoints
+│   │   ├── community/          # public community feed
+│   │   ├── liked/              # per-user likes
+│   │   ├── media/              # all/, movies/, tv/, people/, category/
+│   │   ├── media-stats/        # batch counters + community-pulse
+│   │   ├── moderation/         # profanity filter + toxicity analysis + decisions
+│   │   ├── moods/              # core recommendation engine
+│   │   ├── quiz/               # personality quiz → recommendations
+│   │   ├── review/             # reviews, replies, reactions, snapshots, ban guard
+│   │   ├── search/             # unified search, suggestions, genres, filters
+│   │   ├── user/               # public user profile read
+│   │   └── watchlist/          # per-user saved titles
 │   ├── prisma/                 # PrismaModule + service
-│   ├── quiz/                   # personality quiz → recommendations
 │   ├── redis/                  # RedisModule, cache service (L1)
-│   ├── routes/
-│   │   ├── moods/              # ★ the core engine — moods.service.ts is ~1500 LOC
-│   │   ├── review/             # reviews, replies, reactions, snapshot, ban guard, moderation
-│   │   ├── search/             # unified search, suggestions, genres, countries, filters
-│   │   ├── moderation/         # profanity filter + toxicity analysis + decision service
-│   │   └── user/               # public user profile read
 │   └── utils/
 ├── prisma/
 │   ├── schema.prisma           # 22 models + 3 enums — source of truth for the data model
@@ -216,7 +218,13 @@ server/
 
 **Architecture notes that matter when editing the server:**
 
-- Route ordering is fragile. `routes/moods/moods.controller.ts` documents it explicitly:
+- Feature code belongs under `src/modules/<feature>/`, with its controllers, services,
+  DTOs, and tests together. Shared infrastructure stays outside `modules/`; a controller
+  such as `common/security/turnstile.controller.ts` does not change that ownership.
+  `AppModule` imports feature modules; feature modules own their controllers.
+  Folder names do not define API paths: controller decorators and the global `api`
+  prefix do. Keep existing module imports/exports and route paths when reorganising.
+- Route ordering is fragile. `modules/moods/moods.controller.ts` documents it explicitly:
   static paths (`analytics/global`, `history/:userId`) must be declared before
   `:id`, or Nest matches the literal as a param. Preserve those comments when adding
   endpoints.
@@ -543,18 +551,17 @@ Read this before trusting any single file as a pattern.
 
 1. **`SECURITY.md` is not a security policy.** It is a prompt template for an AI-driven
    architecture/security audit. Real security behaviour lives in
-   `server/src/auth/*`, `server/src/common/*`, `server/src/main.ts`, and
+   `server/src/modules/auth/*`, `server/src/common/*`, `server/src/main.ts`, and
    `client/middleware.ts`.
-2. **Giant service files.** `routes/moods/moods.service.ts` (~1500 lines) and
-   `routes/review/review.service.ts` (~1375 lines) are god-services; `search.service.ts`
+2. **Giant service files.** `modules/moods/moods.service.ts` (~1500 lines) and
+   `modules/review/review.service.ts` (~1375 lines) are god-services; `search.service.ts`
    is ~979. Extract or delegate carefully — these hold the recommendation scoring logic.
 3. **Redundant data access layers.** Prisma + TypeORM + Mongoose + raw `mongodb` are all
    installed. Prisma is authoritative; do not add a fifth path.
 4. **Both Argon2 and bcrypt are dependencies.** Verify which hash a code path actually
    uses before "modernising" it.
-5. **Naming is inconsistent.** `routes/` contains feature *modules* (moods, review,
-   search, user, moderation) while top-level dirs (`liked`, `watchlist`, `media/`,
-   `quiz`) are equally valid modules. `media/all` vs `media/movies` vs `media/tv` overlap
+5. **Media features overlap.** Feature modules now share `src/modules/` (§3.2), but
+   `modules/media/all` vs `modules/media/movies` vs `modules/media/tv` overlap
    substantially (`all/trending` mirrors `movies/trending`).
 6. **Duplicate `action` semantics in the client.** `app/movies/action.ts` and
    `app/tv/action.ts` are server-action modules, while `app/movies/action/` is the
@@ -612,11 +619,11 @@ Read this before trusting any single file as a pattern.
 - "Why does the nav look wrong on this page?" → `Navbar.tsx` maps (`routes`,
   `routeOptions`, `routeIcons`, desktop array) + `NAVBAR_HIDDEN_PREFIXES`. §4.
 - "How are recommendations produced?" → `Mood` valence/arousal + `tmdbGenres` +
-  `keywords` → scoring in `routes/moods/moods.service.ts`, personalised when
+  `keywords` → scoring in `modules/moods/moods.service.ts`, personalised when
   `OptionalJwtGuard` resolves a user, cached in Redis + `RecommendationCache`. §3.2, §5.
 - "Is this styling change on-brand?" → tokens in `globals.css` §7.1 and
   `docs/typography-spec.md` §7.2; the landing page is the reference implementation.
-- "Is this a security hole?" → §9 item 1; read `server/src/auth` and
+- "Is this a security hole?" → §9 item 1; read `server/src/modules/auth` and
   `server/src/common` rather than `SECURITY.md`.
 - "What should I run before a PR?" → `npm run verify`, plus the checklist in
   `CONTRIBUTING.md`.

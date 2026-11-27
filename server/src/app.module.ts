@@ -5,31 +5,29 @@ import * as Joi from 'joi';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ExternalApisModule } from './external-apis/external-apis.module';
 import { JobsModule } from './jobs/jobs.module';
-import { AuthModule } from './auth/auth.module';
-import { UserModule } from './routes/user/user.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { UserModule } from './modules/user/user.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
-import { MoviesModule } from './media/movies/movies.module';
-import { TvModule } from './media/tv/tv.module';
-import { AllModule } from './media/all/all.module';
-import { PeopleModule } from './media/people/people.module';
-import { SearchController } from './routes/search/search.controller';
-import { SearchModule } from './routes/search/search.module';
-import { MoodsController } from './routes/moods/moods.controller';
-import { MoodsModule } from './routes/moods/moods.module';
-import { QuizModule } from './quiz/quiz.module';
-import { CategoryModule } from './media/category/category.module';
-import { WatchlistModule } from './watchlist/watchlist.module';
-import { ReviewModule } from './routes/review/review.module';
-import { CommunityModule } from './routes/community/community.module';
-import { ModerationModule } from './routes/moderation/moderation.module';
-import { LikedModule } from './liked/liked.module';
-import { MediaStatsModule } from './media-stats/media-stats.module';
+import { MoviesModule } from './modules/media/movies/movies.module';
+import { TvModule } from './modules/media/tv/tv.module';
+import { AllModule } from './modules/media/all/all.module';
+import { PeopleModule } from './modules/media/people/people.module';
+import { SearchModule } from './modules/search/search.module';
+import { MoodsModule } from './modules/moods/moods.module';
+import { QuizModule } from './modules/quiz/quiz.module';
+import { CategoryModule } from './modules/media/category/category.module';
+import { WatchlistModule } from './modules/watchlist/watchlist.module';
+import { ReviewModule } from './modules/review/review.module';
+import { CommunityModule } from './modules/community/community.module';
+import { ModerationModule } from './modules/moderation/moderation.module';
+import { LikedModule } from './modules/liked/liked.module';
+import { MediaStatsModule } from './modules/media-stats/media-stats.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TurnstileModule } from './common/security/turnstile.module';
-import { AchievementsModule } from './achievements/achievements.module';
+import { AchievementsModule } from './modules/achievements/achievements.module';
 
 @Module({
   imports: [
@@ -213,6 +211,6 @@ import { AchievementsModule } from './achievements/achievements.module';
       useClass: RateLimitGuard,
     },
   ],
-  controllers: [AppController, SearchController, MoodsController],
+  controllers: [AppController],
 })
 export class AppModule {}

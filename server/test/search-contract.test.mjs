@@ -8,7 +8,7 @@ import ts from 'typescript';
 const require = createRequire(import.meta.url);
 const compiled = ts.transpileModule(
   readFileSync(
-    new URL('../src/routes/search/search.service.ts', import.meta.url),
+    new URL('../src/modules/search/search.service.ts', import.meta.url),
     'utf8',
   ),
   {

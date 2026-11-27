@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { TMDBService } from 'src/external-apis/services/tmdb.service';
-import { MoviesService } from 'src/media/movies/movies.service';
-import { TvService } from 'src/media/tv/tv.service';
-import { AllService } from 'src/media/all/all.service';
-import { MoodNightPreviewService } from 'src/routes/moods/mood-night-preview.service';
+import { MoviesService } from 'src/modules/media/movies/movies.service';
+import { TvService } from 'src/modules/media/tv/tv.service';
+import { AllService } from 'src/modules/media/all/all.service';
+import { MoodNightPreviewService } from 'src/modules/moods/mood-night-preview.service';
 import { runWithTmdbPriority, TMDB_PRIORITY } from 'src/external-apis/services/tmdb-priority.context';
 
 @Injectable()

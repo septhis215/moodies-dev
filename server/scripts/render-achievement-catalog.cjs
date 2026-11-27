@@ -9,13 +9,13 @@ require('ts-node').register({
 const {
   achievementSeeds,
   rarityTheme,
-} = require('../src/achievements/achievement-catalog');
+} = require('../src/modules/achievements/achievement-catalog');
 const {
   RULE_TARGETS,
   ACHIEVEMENT_RULE_VERSION,
   DISCOVERY_POLICY,
   QUIZ_TYPES,
-} = require('../src/achievements/achievement-rules');
+} = require('../src/modules/achievements/achievement-rules');
 const quote = (value) =>
   value === null ? 'NULL' : `'${String(value).replaceAll("'", "''")}'`;
 const json = (value) => `${quote(JSON.stringify(value))}::jsonb`;

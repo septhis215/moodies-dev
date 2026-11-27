@@ -66,10 +66,10 @@ After this pass, guest browsing should be limited to:
 
 | Area | File | Finding | Recommendation |
 |---|---|---|---|
-| TMDB details/recommendations | `server/src/media/movies/**`, `server/src/media/tv/**` | Mostly uses Redis/DB caches, but detail pages still fan out at the page layer | Consider aggregate endpoints per page where needed |
-| Review carousel enrichment | `server/src/routes/review/review.service.ts` | Already batches cached `mediaDetail` lookup before TMDB fallback | Keep; this is a good pattern |
-| Watchlist/liked services | `server/src/watchlist/watchlist.service.ts`, `server/src/liked/liked.service.ts` | DB select is narrow and transactional | Keep security guards; add optional enriched/batched read endpoint later |
-| Media stats pulse | `server/src/media-stats/media-stats.service.ts` | Uses batch DB queries then TMDB enrichment | Keep caching under review if pulse is high traffic |
+| TMDB details/recommendations | `server/src/modules/media/movies/**`, `server/src/modules/media/tv/**` | Mostly uses Redis/DB caches, but detail pages still fan out at the page layer | Consider aggregate endpoints per page where needed |
+| Review carousel enrichment | `server/src/modules/review/review.service.ts` | Already batches cached `mediaDetail` lookup before TMDB fallback | Keep; this is a good pattern |
+| Watchlist/liked services | `server/src/modules/watchlist/watchlist.service.ts`, `server/src/modules/liked/liked.service.ts` | DB select is narrow and transactional | Keep security guards; add optional enriched/batched read endpoint later |
+| Media stats pulse | `server/src/modules/media-stats/media-stats.service.ts` | Uses batch DB queries then TMDB enrichment | Keep caching under review if pulse is high traffic |
 | External API client | `server/src/external-apis/services/tmdb.service.ts` | Redis-backed TMDB caching is present | Keep Redis first; avoid direct client TMDB calls for user lists |
 
 ## Recommended API Flow
@@ -126,7 +126,7 @@ After this pass, guest browsing should be limited to:
 ### Priority 4: Add optional page aggregate endpoints for details
 
 - Status: Recommended.
-- Files affected: `client/app/movies/[id]/page.tsx`, `client/app/tv/[id]/page.tsx`, `server/src/media/movies`, `server/src/media/tv`.
+- Files affected: `client/app/movies/[id]/page.tsx`, `client/app/tv/[id]/page.tsx`, `server/src/modules/media/movies`, `server/src/modules/media/tv`.
 - Risk: Medium.
 - Expected benefit: Fewer backend round trips for details pages.
 

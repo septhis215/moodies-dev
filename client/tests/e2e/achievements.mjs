@@ -13,7 +13,7 @@ require("ts-node").register({
 });
 const {
   achievementSeeds,
-} = require("../../../server/src/achievements/achievement-catalog.ts");
+} = require("../../../server/src/modules/achievements/achievement-catalog.ts");
 const api = await startDetailApi();
 const base = process.env.BASE_URL || "http://localhost:3000";
 const output = "../output/achievements/browser";

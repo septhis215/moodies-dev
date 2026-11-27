@@ -2,12 +2,12 @@ import type { PrismaClient } from '@prisma/client';
 import {
   achievementSeeds,
   rarityTheme,
-} from '../../src/achievements/achievement-catalog';
+} from '../../src/modules/achievements/achievement-catalog';
 import {
   ACHIEVEMENT_RULE_VERSION,
   DISCOVERY_POLICY,
   QUIZ_TYPES,
-} from '../../src/achievements/achievement-rules';
+} from '../../src/modules/achievements/achievement-rules';
 import { isDeepStrictEqual } from 'node:util';
 
 export async function seedAchievements(prisma: PrismaClient) {
